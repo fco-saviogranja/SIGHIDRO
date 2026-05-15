@@ -14,7 +14,11 @@ export function PanelHeader({ title, icon, actionLabel }: PanelHeaderProps) {
         {icon}
         <h2>{title}</h2>
       </div>
-      <button type="button" aria-label={actionLabel ?? `Abrir detalhes de ${title}`}>
+      <button
+        type="button"
+        aria-label={actionLabel ?? `Abrir detalhes de ${title}`}
+        title={actionLabel ?? `Abrir detalhes de ${title}`}
+      >
         <ChevronRight size={19} />
       </button>
     </div>

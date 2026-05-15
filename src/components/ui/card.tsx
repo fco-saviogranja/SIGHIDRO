@@ -5,7 +5,7 @@ export const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDi
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("rounded-xl border border-slate-200 bg-white p-4 shadow-sm", className)}
+      className={cn("rounded-md border border-[#E0E0E0] bg-white p-5 shadow-none", className)}
       {...props}
     />
   ),
@@ -15,7 +15,7 @@ Card.displayName = "Card";
 
 export const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("mb-4 flex items-start justify-between", className)} {...props} />
+    <div ref={ref} className={cn("mb-4 flex items-start justify-between gap-4", className)} {...props} />
   ),
 );
 

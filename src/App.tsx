@@ -91,11 +91,11 @@ function Header() {
       {renderNav('desktop-nav')}
 
       <div className="topbar-actions">
-        <button className="icon-button" type="button" aria-label="Notificações">
+        <button className="icon-button" type="button" aria-label="Notificações" title="Notificações">
           <Bell size={19} />
           <span className="notification-dot" />
         </button>
-        <button className="icon-button" type="button" aria-label="Configurações">
+        <button className="icon-button" type="button" aria-label="Configurações" title="Configurações">
           <Settings size={19} />
         </button>
         {isAuthenticated ? (
@@ -121,6 +121,7 @@ function Header() {
           className="menu-button"
           type="button"
           aria-label={isMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+          title={isMenuOpen ? 'Fechar menu' : 'Abrir menu'}
           onClick={() => setIsMenuOpen((current) => !current)}
         >
           {isMenuOpen ? <X size={22} /> : <Menu size={22} />}

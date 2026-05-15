@@ -82,7 +82,7 @@ function ModulePage({ variant }: { variant: ModuleVariant }) {
       {variant === 'mapa' ? <MapWorkspace records={allRecords} /> : null}
       {variant === 'relatorios' ? <ReportsWorkspace records={allRecords} /> : null}
 
-      <section className="panel table-panel">
+      <section className="panel table-panel module-table-panel">
         <PanelHeader title={variant === 'manutencao' ? 'Fila operacional' : 'Registros conectados'} icon={<BarChart3 size={19} />} />
         <div className="asset-table" role="table" aria-label="Registros conectados ao módulo">
           <div className="asset-row table-head" role="row">
