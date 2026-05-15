@@ -1,6 +1,5 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, lazy, Suspense, useMemo, useState } from 'react';
 import { Edit3, Plus, RotateCcw, Save, Trash2, X } from 'lucide-react';
-import CoordinatePickerMap from '../components/CoordinatePickerMap';
 import { useHydroRegistry } from '../HydroRegistryContext';
 import {
   categoryMeta,
@@ -10,6 +9,8 @@ import {
   statusOptions,
 } from '../metadata';
 import type { AssetCategory, HydroRecord, HydroRecordDraft, InternalProfile, OperationalStatus } from '../types';
+
+const CoordinatePickerMap = lazy(() => import('../components/CoordinatePickerMap'));
 
 const nowLabel = () =>
   new Intl.DateTimeFormat('pt-BR', {
@@ -330,11 +331,13 @@ function CadastroHidrico() {
 
             <div className="full-field coordinate-picker-field">
               <span>Localização geográfica</span>
-              <CoordinatePickerMap
-                latitude={draft.latitude}
-                longitude={draft.longitude}
-                onChange={updateDraftCoordinates}
-              />
+              <Suspense fallback={<div className="coordinate-map-loading">Carregando seletor geográfico</div>}>
+                <CoordinatePickerMap
+                  latitude={draft.latitude}
+                  longitude={draft.longitude}
+                  onChange={updateDraftCoordinates}
+                />
+              </Suspense>
             </div>
 
             <label className="full-field">

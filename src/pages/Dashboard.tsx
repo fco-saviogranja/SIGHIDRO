@@ -10,19 +10,28 @@ import {
   Waves,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useMemo } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useHydroRegistry } from '../HydroRegistryContext';
 import { flowSeries, productionSeries } from '../data';
 import { categoryMeta, statusLabel, systemModules } from '../metadata';
 import type { Alert, ChartPoint, HydroRecord, Indicator, Maintenance, OperationalStatus } from '../types';
-import OperationalLeafletMap from '../components/OperationalLeafletMap';
 import { PanelHeader } from '../components/PanelHeader';
+
+const OperationalLeafletMap = lazy(() => import('../components/OperationalLeafletMap'));
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
   show: { opacity: 1, y: 0 },
 };
+
+function MapFallback() {
+  return (
+    <div className="operational-map-loading" role="status">
+      Carregando camada geográfica
+    </div>
+  );
+}
 
 function Dashboard() {
   const { allRecords, registry, syncStatus, retrySync, backend } = useHydroRegistry();
@@ -238,7 +247,9 @@ function OperationalMap({ records }: { records: HydroRecord[] }) {
     <section className="panel map-panel" id="mapa">
       <PanelHeader title="Mapa operacional" icon={<Map size={19} />} />
       <div className="map-canvas real-map-shell" aria-label="Mapa operacional com ativos georreferenciados">
-        <OperationalLeafletMap records={records} />
+        <Suspense fallback={<MapFallback />}>
+          <OperationalLeafletMap records={records} />
+        </Suspense>
         <div className="map-legend">
           <span>
             <i className="legend-dot operando" />

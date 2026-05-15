@@ -1,11 +1,6 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { Navigate, NavLink, Outlet, Route, Routes } from 'react-router-dom';
 import { Bell, Droplets, Menu, Settings } from 'lucide-react';
-import CadastroHidrico from './pages/CadastroHidrico';
-import Dashboard from './pages/Dashboard';
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/Login';
-import ModulePage from './pages/ModulePage';
 import { useAuth } from './AuthContext';
 import { HydroRegistryProvider } from './HydroRegistryContext';
 import { navItems, userContext } from './metadata';
@@ -14,6 +9,25 @@ import { Avatar, AvatarFallback } from './components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { Button } from './components/ui/button';
+
+const CadastroHidrico = lazy(() => import('./pages/CadastroHidrico'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const LoginPage = lazy(() => import('./pages/Login'));
+const ModulePage = lazy(() => import('./pages/ModulePage'));
+
+function PageSuspense({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<RouteLoading />}>{children}</Suspense>;
+}
+
+function RouteLoading() {
+  return (
+    <div className="route-loading" role="status">
+      <span />
+      Carregando módulo
+    </div>
+  );
+}
 
 function RequireAuth() {
   const { isAuthenticated } = useAuth();
@@ -28,8 +42,8 @@ function RequireAuth() {
 function App() {
   return (
     <Routes>
-      <Route index element={<LandingPage />} />
-      <Route path="login" element={<LoginPage />} />
+      <Route index element={<PageSuspense><LandingPage /></PageSuspense>} />
+      <Route path="login" element={<PageSuspense><LoginPage /></PageSuspense>} />
       <Route element={<RequireAuth />}>
         <Route element={(
           <HydroRegistryProvider>
@@ -53,7 +67,9 @@ function AppShell() {
   return (
     <div className="app-shell dark">
       <Header />
-      <Outlet />
+      <PageSuspense>
+        <Outlet />
+      </PageSuspense>
     </div>
   );
 }

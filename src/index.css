@@ -2549,6 +2549,52 @@
     linear-gradient(180deg, #050914 0%, #07111f 46%, #09121f 100%);
 }
 
+.route-loading,
+.operational-map-loading,
+.coordinate-map-loading {
+  display: grid;
+  place-items: center;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.route-loading {
+  min-height: 52vh;
+  gap: 12px;
+}
+
+.route-loading span {
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(148, 163, 184, 0.18);
+  border-top-color: #67e8f9;
+  border-radius: 999px;
+  animation: spin 780ms linear infinite;
+}
+
+.operational-map-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  min-height: inherit;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.coordinate-map-loading {
+  min-height: 260px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: var(--radius-sm);
+  background: rgba(15, 23, 42, 0.42);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .app-shell.dark::before {
   position: fixed;
   inset: 0;

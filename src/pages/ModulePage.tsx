@@ -7,12 +7,13 @@ import {
   Map,
   Waves,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 import { useHydroRegistry } from '../HydroRegistryContext';
-import OperationalLeafletMap from '../components/OperationalLeafletMap';
 import { PanelHeader } from '../components/PanelHeader';
 import { categoryMeta, statusLabel } from '../metadata';
 import type { HydroRecord } from '../types';
+
+const OperationalLeafletMap = lazy(() => import('../components/OperationalLeafletMap'));
 
 type ModuleVariant = 'monitoramento' | 'manutencao' | 'mapa' | 'relatorios';
 
@@ -154,7 +155,9 @@ function MapWorkspace({ records }: { records: HydroRecord[] }) {
       <PanelHeader title="Camada geográfica operacional" icon={<Map size={19} />} />
       <div className="module-map-layout">
         <div className="map-canvas map-canvas-large" aria-label="Mapa operacional ampliado">
-          <OperationalLeafletMap className="operational-map-large" records={records} />
+          <Suspense fallback={<div className="operational-map-loading">Carregando camada geográfica</div>}>
+            <OperationalLeafletMap className="operational-map-large" records={records} />
+          </Suspense>
         </div>
         <div className="map-side-list">
           {markers.map((record) => (
