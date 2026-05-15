@@ -6,19 +6,36 @@ import Dashboard from './pages/Dashboard';
 import LoginPage from './pages/Login';
 import ModulePage from './pages/ModulePage';
 import { useAuth } from './AuthContext';
+import { HydroRegistryProvider } from './HydroRegistryContext';
 import { navItems, userContext } from './metadata';
+
+function RequireAuth() {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Outlet />;
+}
 
 function App() {
   return (
     <Routes>
-      <Route element={<AppShell />}>
-        <Route index element={<Dashboard />} />
-        <Route path="cadastro" element={<CadastroHidrico />} />
-        <Route path="login" element={<LoginPage />} />
-        <Route path="monitoramento" element={<ModulePage variant="monitoramento" />} />
-        <Route path="manutencao" element={<ModulePage variant="manutencao" />} />
-        <Route path="mapa" element={<ModulePage variant="mapa" />} />
-        <Route path="relatorios" element={<ModulePage variant="relatorios" />} />
+      <Route path="login" element={<LoginPage />} />
+      <Route element={<RequireAuth />}>
+        <Route element={(
+          <HydroRegistryProvider>
+            <AppShell />
+          </HydroRegistryProvider>
+        )}>
+          <Route index element={<Dashboard />} />
+          <Route path="cadastro" element={<CadastroHidrico />} />
+          <Route path="monitoramento" element={<ModulePage variant="monitoramento" />} />
+          <Route path="manutencao" element={<ModulePage variant="manutencao" />} />
+          <Route path="mapa" element={<ModulePage variant="mapa" />} />
+          <Route path="relatorios" element={<ModulePage variant="relatorios" />} />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -104,7 +121,7 @@ function Header() {
           className="menu-button"
           type="button"
           aria-label={isMenuOpen ? 'Fechar menu' : 'Abrir menu'}
-          aria-expanded={isMenuOpen}
+          aria-expanded={isMenuOpen ? 'true' : 'false'}
           onClick={() => setIsMenuOpen((current) => !current)}
         >
           {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
