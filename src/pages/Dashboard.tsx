@@ -11,12 +11,18 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { useHydroRegistry } from '../HydroRegistryContext';
 import { flowSeries, productionSeries } from '../data';
 import { categoryMeta, statusLabel, systemModules } from '../metadata';
 import type { Alert, ChartPoint, HydroRecord, Indicator, Maintenance, OperationalStatus } from '../types';
 import OperationalLeafletMap from '../components/OperationalLeafletMap';
 import { PanelHeader } from '../components/PanelHeader';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0 },
+};
 
 function Dashboard() {
   const { allRecords, registry, syncStatus, retrySync, backend } = useHydroRegistry();
@@ -33,8 +39,14 @@ function Dashboard() {
   );
 
   return (
-    <main className="dashboard">
-      <section className="hero-strip">
+    <motion.main
+      animate="show"
+      className="dashboard"
+      initial="hidden"
+      transition={{ duration: 0.36, ease: 'easeOut' }}
+      variants={fadeUp}
+    >
+      <motion.section className="hero-strip" variants={fadeUp}>
         <div>
           <span className="eyebrow">Centro de Inteligência Hídrica Municipal</span>
           <h1>Operação integrada do abastecimento público</h1>
@@ -63,18 +75,18 @@ function Dashboard() {
             )}
           </span>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="metrics-grid" aria-label="Indicadores operacionais">
+      <motion.section className="metrics-grid" aria-label="Indicadores operacionais" variants={fadeUp}>
         {indicators.map((indicator) => (
           <KpiCard key={indicator.label} indicator={indicator} />
         ))}
-      </section>
+      </motion.section>
 
-      <section className="operations-grid">
+      <motion.section className="operations-grid" variants={fadeUp}>
         <OperationalMap records={allRecords} />
         <AlertPanel alerts={dashboardAlerts} />
-      </section>
+      </motion.section>
 
       <section className="analytics-grid">
         <FlowChart data={flowData} />
@@ -117,7 +129,7 @@ function Dashboard() {
 
       <AdvancedFilters />
       <AssetTable records={allRecords} />
-    </main>
+    </motion.main>
   );
 }
 
