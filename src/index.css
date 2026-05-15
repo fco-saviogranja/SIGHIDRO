@@ -20,21 +20,17 @@
   --amber: #d4a437;
   --red: #d9534f;
   --ink: #1a232b;
-  --shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
-  --shadow-soft: 0 4px 12px rgba(15, 23, 42, 0.05);
+  --muted: #65737d;
+  --line: #dde4ea;
   --panel: #ffffff;
   --panel-soft: #f7f9fb;
-  --shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
-  --shadow-soft: 0 8px 20px rgba(15, 23, 42, 0.06);
+  --shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+  --shadow-soft: 0 4px 12px rgba(15, 23, 42, 0.05);
   --radius-lg: 16px;
   --radius-md: 12px;
   --radius-sm: 8px;
   --sidebar-bg: #fbfcfd;
   --sidebar-border: #e3e8ee;
-}
-  padding: 0 22px;
-  border-bottom: 1px solid var(--line);
-  box-sizing: border-box;
 }
 
 body {
