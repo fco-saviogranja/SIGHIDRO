@@ -19,6 +19,13 @@ const nowLabel = () =>
     minute: '2-digit',
   }).format(new Date());
 
+const defaultCoordinatesByCategory: Record<AssetCategory, { latitude: number; longitude: number }> = {
+  poço: { latitude: -7.5748, longitude: -39.3042 },
+  bomba: { latitude: -7.5812, longitude: -39.282 },
+  reservatório: { latitude: -7.5632, longitude: -39.2684 },
+  localidade: { latitude: -7.576, longitude: -39.2826 },
+};
+
 const makeDraft = (category: AssetCategory): HydroRecordDraft => ({
   name: '',
   location: '',
@@ -30,6 +37,8 @@ const makeDraft = (category: AssetCategory): HydroRecordDraft => ({
   energyType: category === 'localidade' ? undefined : 'Rede elétrica',
   depthMeters: category === 'poço' ? 120 : undefined,
   capacityM3: category === 'reservatório' || category === 'localidade' ? 300 : undefined,
+  latitude: defaultCoordinatesByCategory[category].latitude,
+  longitude: defaultCoordinatesByCategory[category].longitude,
   lastReading: nowLabel(),
   notes: '',
 });
@@ -65,7 +74,7 @@ function CadastroHidrico() {
   };
 
   const updateNumericDraft = (
-    field: 'flowRate' | 'reservoirLevel' | 'powerHp' | 'depthMeters' | 'capacityM3',
+    field: 'flowRate' | 'reservoirLevel' | 'powerHp' | 'depthMeters' | 'capacityM3' | 'latitude' | 'longitude',
     value: string,
   ) => {
     updateDraft(field, value === '' ? undefined : Number(value));
@@ -91,6 +100,8 @@ function CadastroHidrico() {
       notes: draft.notes.trim(),
       lastReading: draft.lastReading.trim() || nowLabel(),
       flowRate: Number(draft.flowRate || 0),
+      latitude: typeof draft.latitude === 'number' && Number.isFinite(draft.latitude) ? draft.latitude : undefined,
+      longitude: typeof draft.longitude === 'number' && Number.isFinite(draft.longitude) ? draft.longitude : undefined,
     };
 
     if (!normalizedDraft.name || !normalizedDraft.location) {
@@ -271,6 +282,26 @@ function CadastroHidrico() {
                 type="number"
                 value={draft.capacityM3 ?? ''}
                 onChange={(event) => updateNumericDraft('capacityM3', event.target.value)}
+              />
+            </label>
+
+            <label>
+              Latitude
+              <input
+                step="0.000001"
+                type="number"
+                value={draft.latitude ?? ''}
+                onChange={(event) => updateNumericDraft('latitude', event.target.value)}
+              />
+            </label>
+
+            <label>
+              Longitude
+              <input
+                step="0.000001"
+                type="number"
+                value={draft.longitude ?? ''}
+                onChange={(event) => updateNumericDraft('longitude', event.target.value)}
               />
             </label>
 

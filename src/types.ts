@@ -34,6 +34,8 @@ export type HydroRecord = {
   energyType?: string;
   depthMeters?: number;
   capacityM3?: number;
+  latitude?: number;
+  longitude?: number;
   lastReading: string;
   notes: string;
 };

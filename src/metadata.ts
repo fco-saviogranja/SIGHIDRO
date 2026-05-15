@@ -102,7 +102,7 @@ export const systemModules: ModuleArea[] = [
     id: 'mapa',
     path: '/mapa',
     title: 'Mapa Operacional',
-    description: 'Visão territorial simulada da rede, ativos e pontos de alerta.',
+    description: 'Visão territorial georreferenciada da rede, ativos e pontos de alerta.',
     items: ['Zonas', 'Ativos', 'Rede', 'Alertas'],
     status: 'operando',
     accent: 'blue',

@@ -22,9 +22,16 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 const devAdminEmail = import.meta.env.VITE_ADMIN_EMAIL?.trim().toLowerCase() || 'admin@sighidro.gov.br';
 const devAdminPassword = import.meta.env.VITE_ADMIN_PASSWORD || (import.meta.env.DEV ? 'Admin@2026' : '');
+const isApiBackendEnabled = import.meta.env.VITE_SIGHIDRO_BACKEND === 'api';
 
 const canUseDevAdminFallback = (email: string, password: string) =>
   import.meta.env.DEV && email.trim().toLowerCase() === devAdminEmail && password === devAdminPassword;
+
+const persistDevAdminSession = (email: string) => {
+  const fallbackToken = `dev-admin-${Date.now()}`;
+  persistAuth(fallbackToken, email, 'admin');
+  return fallbackToken;
+};
 
 const readErrorMessage = async (response: Response) => {
   try {
@@ -49,6 +56,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const normalizedEmail = email.trim().toLowerCase();
     setIsBusy(true);
     try {
+      if (!isApiBackendEnabled && canUseDevAdminFallback(normalizedEmail, password)) {
+        const fallbackToken = persistDevAdminSession(normalizedEmail);
+        setToken(fallbackToken);
+        setUserEmail(normalizedEmail);
+        setUserRole('admin');
+        return;
+      }
+
       const response = await fetch(buildApiUrl('/api/auth/login'), {
         method: 'POST',
         headers: {
@@ -78,8 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserRole(resolvedRole);
     } catch (error) {
       if (canUseDevAdminFallback(normalizedEmail, password)) {
-        const fallbackToken = `dev-admin-${Date.now()}`;
-        persistAuth(fallbackToken, normalizedEmail, 'admin');
+        const fallbackToken = persistDevAdminSession(normalizedEmail);
         setToken(fallbackToken);
         setUserEmail(normalizedEmail);
         setUserRole('admin');

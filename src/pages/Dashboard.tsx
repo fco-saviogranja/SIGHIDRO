@@ -15,6 +15,7 @@ import { useHydroRegistry } from '../HydroRegistryContext';
 import { flowSeries, productionSeries } from '../data';
 import { categoryMeta, statusLabel, systemModules } from '../metadata';
 import type { Alert, ChartPoint, HydroRecord, Indicator, Maintenance, OperationalStatus } from '../types';
+import OperationalLeafletMap from '../components/OperationalLeafletMap';
 import { PanelHeader } from '../components/PanelHeader';
 
 function Dashboard() {
@@ -207,32 +208,11 @@ function KpiCard({ indicator }: { indicator: Indicator }) {
 }
 
 function OperationalMap({ records }: { records: HydroRecord[] }) {
-  const markerPositions = ['marker-pos-1', 'marker-pos-2', 'marker-pos-3', 'marker-pos-4', 'marker-pos-5'];
-  const mapMarkers = records.slice(0, 5);
-
   return (
     <section className="panel map-panel" id="mapa">
       <PanelHeader title="Mapa operacional" icon={<Map size={19} />} />
-      <div className="map-canvas" aria-label="Mapa operacional simulado com poços, reservatórios e rede">
-        <svg className="pipeline-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <path className="main-pipeline" d="M8 66 C25 55, 36 49, 51 48 S78 41, 94 29" />
-          <path className="secondary-pipeline" d="M28 75 C39 67, 45 57, 49 49 S60 38, 67 34" />
-          <path className="pressure-line" d="M49 48 C54 57, 61 62, 73 66" />
-          <path className="warning-line" d="M31 72 C25 66, 22 59, 25 52" />
-        </svg>
-        <div className="terrain-label label-north">Serra Boa</div>
-        <div className="terrain-label label-center">Jardim Centro</div>
-        <div className="terrain-label label-east">Brejinho</div>
-        {mapMarkers.map((marker, index) => (
-          <button
-            className={`map-marker ${markerPositions[index]} status-${marker.status}`}
-            key={marker.id}
-            type="button"
-            aria-label={`${marker.name}: ${statusLabel[marker.status]}`}
-          >
-            <span />
-          </button>
-        ))}
+      <div className="map-canvas real-map-shell" aria-label="Mapa operacional com ativos georreferenciados">
+        <OperationalLeafletMap records={records} />
         <div className="map-legend">
           <span>
             <i className="legend-dot operando" />

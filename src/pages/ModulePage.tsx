@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useHydroRegistry } from '../HydroRegistryContext';
+import OperationalLeafletMap from '../components/OperationalLeafletMap';
 import { PanelHeader } from '../components/PanelHeader';
 import { categoryMeta, statusLabel } from '../metadata';
 import type { HydroRecord } from '../types';
@@ -38,7 +39,7 @@ const moduleConfig: Record<ModuleVariant, ModuleConfig> = {
   mapa: {
     eyebrow: 'Mapa Operacional',
     title: 'Distribuição territorial dos ativos cadastrados',
-    description: 'Representação visual simulada para validar a futura camada geográfica do SIGHIDRO.',
+    description: 'Mapa georreferenciado dos ativos, status operacional e rede hídrica cadastrada.',
     icon: Map,
   },
   relatorios: {
@@ -150,26 +151,10 @@ function MapWorkspace({ records }: { records: HydroRecord[] }) {
 
   return (
     <section className="panel route-map-panel">
-      <PanelHeader title="Camada geográfica simulada" icon={<Map size={19} />} />
+      <PanelHeader title="Camada geográfica operacional" icon={<Map size={19} />} />
       <div className="module-map-layout">
-        <div className="map-canvas map-canvas-large" role="img" aria-label="Mapa operacional ampliado">
-          <svg className="pipeline-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-            <path className="main-pipeline" d="M8 66 C25 55, 36 49, 51 48 S78 41, 94 29" />
-            <path className="secondary-pipeline" d="M28 75 C39 67, 45 57, 49 49 S60 38, 67 34" />
-            <path className="pressure-line" d="M49 48 C54 57, 61 62, 73 66" />
-            <path className="warning-line" d="M31 72 C25 66, 22 59, 25 52" />
-          </svg>
-          {markers.map((record, index) => (
-            <button
-              className={`map-marker status-${record.status}`}
-              key={record.id}
-              style={{ left: `${24 + ((index * 13) % 52)}%`, top: `${30 + ((index * 17) % 44)}%` }}
-              type="button"
-              aria-label={`${record.name}: ${statusLabel[record.status]}`}
-            >
-              <span />
-            </button>
-          ))}
+        <div className="map-canvas map-canvas-large" aria-label="Mapa operacional ampliado">
+          <OperationalLeafletMap className="operational-map-large" records={records} />
         </div>
         <div className="map-side-list">
           {markers.map((record) => (
