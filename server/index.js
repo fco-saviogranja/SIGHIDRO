@@ -1,10 +1,18 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import cors from 'cors';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Pool } from 'pg';
+
+const serverDir = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(serverDir, '../.env.local') });
+dotenv.config({ path: resolve(serverDir, '.env.local') });
+dotenv.config({ path: resolve(serverDir, '.env') });
+dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT) || 4000;
@@ -42,14 +50,22 @@ const normalizeRegistryPayload = (payload) => {
   };
 };
 
+const normalizeEmail = (email) => String(email ?? '').trim().toLowerCase();
+
 const ensureSchema = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id text PRIMARY KEY,
       email text UNIQUE NOT NULL,
       password_hash text NOT NULL,
+      role text NOT NULL DEFAULT 'operator',
       created_at timestamptz DEFAULT NOW()
     );
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'operator';
   `);
 
   await pool.query(`
@@ -61,12 +77,46 @@ const ensureSchema = async () => {
   `);
 };
 
+const ensureAdminUser = async () => {
+  const email = normalizeEmail(process.env.ADMIN_EMAIL);
+  const password = process.env.ADMIN_PASSWORD;
+
+  if (!email || !password) {
+    console.warn('ADMIN_EMAIL/ADMIN_PASSWORD not configured; admin user was not seeded.');
+    return;
+  }
+
+  if (password.length < 8) {
+    throw new Error('ADMIN_PASSWORD must be at least 8 characters.');
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+
+  if (existing.rows.length > 0) {
+    await pool.query(
+      'UPDATE users SET password_hash = $1, role = $2 WHERE email = $3',
+      [passwordHash, 'admin', email],
+    );
+    console.log(`Admin user ensured: ${email}`);
+    return;
+  }
+
+  await pool.query('INSERT INTO users (id, email, password_hash, role) VALUES ($1, $2, $3, $4)', [
+    crypto.randomUUID(),
+    email,
+    passwordHash,
+    'admin',
+  ]);
+  console.log(`Admin user created: ${email}`);
+};
+
 const signToken = (user) => {
   if (!jwtSecret) {
     throw new Error('JWT_SECRET is not configured');
   }
 
-  return jwt.sign({ sub: user.id, email: user.email }, jwtSecret, { expiresIn: '7d' });
+  return jwt.sign({ sub: user.id, email: user.email, role: user.role }, jwtSecret, { expiresIn: '7d' });
 };
 
 const requireAuth = (req, res, next) => {
@@ -82,7 +132,7 @@ const requireAuth = (req, res, next) => {
 
   try {
     const payload = jwt.verify(token, jwtSecret);
-    req.user = { id: payload.sub, email: payload.email };
+    req.user = { id: payload.sub, email: payload.email, role: payload.role ?? 'operator' };
   } catch {
     return res.status(401).json({ error: 'Invalid token.' });
   }
@@ -97,8 +147,9 @@ app.get('/api/health', (_req, res) => {
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, password } = req.body ?? {};
+    const normalizedEmail = normalizeEmail(email);
 
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 
@@ -106,18 +157,19 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters.' });
     }
 
-    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [normalizedEmail]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'Email already registered.' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = { id: crypto.randomUUID(), email };
+    const user = { id: crypto.randomUUID(), email: normalizedEmail, role: 'operator' };
 
-    await pool.query('INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3)', [
+    await pool.query('INSERT INTO users (id, email, password_hash, role) VALUES ($1, $2, $3, $4)', [
       user.id,
       user.email,
       passwordHash,
+      user.role,
     ]);
 
     return res.status(201).json({ user });
@@ -130,12 +182,13 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body ?? {};
+    const normalizedEmail = normalizeEmail(email);
 
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    const result = await pool.query('SELECT id, password_hash FROM users WHERE email = $1', [email]);
+    const result = await pool.query('SELECT id, email, password_hash, role FROM users WHERE email = $1', [normalizedEmail]);
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
@@ -146,8 +199,8 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
-    const token = signToken({ id: user.id, email });
-    return res.json({ token, user: { id: user.id, email } });
+    const token = signToken({ id: user.id, email: user.email, role: user.role });
+    return res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
   } catch (error) {
     console.error('Login error', error);
     return res.status(500).json({ error: 'Unable to login.' });
@@ -194,6 +247,7 @@ app.put('/api/registry', requireAuth, async (req, res) => {
 
 const start = async () => {
   await ensureSchema();
+  await ensureAdminUser();
   app.listen(port, () => {
     console.log(`SIGHIDRO API listening on ${port}`);
   });

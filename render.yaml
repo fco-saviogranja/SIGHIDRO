@@ -19,6 +19,10 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
+      - key: ADMIN_EMAIL
+        value: admin@sighidro.gov.br
+      - key: ADMIN_PASSWORD
+        sync: false
       - key: CORS_ORIGIN
         value: https://sighidro.tech
       - key: DATABASE_URL
@@ -39,3 +43,5 @@ services:
         value: api
       - key: VITE_API_BASE_URL
         value: https://sighidro-api.onrender.com
+      - key: VITE_ADMIN_EMAIL
+        value: admin@sighidro.gov.br

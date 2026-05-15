@@ -1,6 +1,5 @@
 import {
   Activity,
-  BarChart3,
   ClipboardList,
   Database,
   FileBarChart,
@@ -132,7 +131,7 @@ export const systemModules: ModuleArea[] = [
 ];
 
 export const navItems = [
-  { label: 'Dashboard', path: '/', icon: Gauge },
+  { label: 'Dashboard', path: '/dashboard', icon: Gauge },
   { label: 'Cadastro Hídrico', path: '/cadastro', icon: Database },
   { label: 'Monitoramento', path: '/monitoramento', icon: Activity },
   { label: 'Manutenção', path: '/manutencao', icon: ClipboardList },

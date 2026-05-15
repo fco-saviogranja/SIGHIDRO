@@ -12,7 +12,7 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -25,7 +25,7 @@ function LoginPage() {
       } else {
         await register(email.trim(), password);
       }
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : 'Falha ao autenticar.';
       setError(message);
