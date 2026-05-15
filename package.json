@@ -9,15 +9,23 @@
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@tanstack/react-table": "^8.20.5",
+    "@tremor/react": "^3.18.4",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-router-dom": "^7.15.1"
+    "react-router-dom": "^7.15.1",
+    "tailwind-merge": "^2.5.2"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14",
     "typescript": "^6.0.3",
     "vite": "^8.0.13"
   }
