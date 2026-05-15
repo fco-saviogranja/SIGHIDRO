@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -12,10 +13,14 @@ import { categoryMeta, categoryOrder } from './metadata';
 import { hydroRegistryRepository } from './services/hydroRegistryRepository';
 import type { AssetCategory, HydroRecord, HydroRecordDraft, HydroRegistry } from './types';
 
+type SyncStatus = 'idle' | 'syncing' | 'failed' | 'offline';
+
 type HydroRegistryContextValue = {
   registry: HydroRegistry;
   allRecords: HydroRecord[];
   backend: 'localStorage' | 'api';
+  syncStatus: SyncStatus;
+  retrySync: () => Promise<boolean>;
   createRecord: (category: AssetCategory, draft: HydroRecordDraft) => void;
   updateRecord: (category: AssetCategory, id: string, draft: HydroRecordDraft) => void;
   deleteRecord: (category: AssetCategory, id: string) => void;
@@ -48,15 +53,19 @@ const cloneDefaults = (): HydroRegistry => JSON.parse(JSON.stringify(defaultHydr
 export function HydroRegistryProvider({ children }: { children: ReactNode }) {
   const [registry, setRegistry] = useState<HydroRegistry>(() => cloneDefaults());
   const [isHydrated, setIsHydrated] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const registryRef = useRef(registry);
 
   useEffect(() => {
     let isActive = true;
-
+    let didLoad = false;
     const loadRegistry = async () => {
       try {
         const loaded = await hydroRegistryRepository.load();
         if (isActive) {
           setRegistry(loaded);
+          registryRef.current = loaded;
+          didLoad = true;
         }
       } catch {
         if (isActive) {
@@ -80,8 +89,58 @@ export function HydroRegistryProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    void hydroRegistryRepository.save(registry);
+    let active = true;
+
+    const doSave = async () => {
+      setSyncStatus('syncing');
+      try {
+        const ok = await hydroRegistryRepository.save(registry);
+        if (active) {
+          setSyncStatus(ok ? 'idle' : 'failed');
+        }
+      } catch {
+        if (active) {
+          setSyncStatus('failed');
+        }
+      }
+    };
+
+    void doSave();
+
+    return () => {
+      active = false;
+    };
   }, [isHydrated, registry]);
+
+  useEffect(() => {
+    registryRef.current = registry;
+  }, [registry]);
+
+  // Background sync when backend is API and hydrated
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (hydroRegistryRepository.backend !== 'api') return;
+
+    const syncIntervalMs = Number(import.meta.env.VITE_SYNC_INTERVAL_MS ?? 60000);
+    const id = window.setInterval(() => {
+      void hydroRegistryRepository.save(registryRef.current).then((ok) => {
+        setSyncStatus(ok ? 'idle' : 'failed');
+      });
+    }, syncIntervalMs);
+
+    const onOnline = () => {
+      void hydroRegistryRepository.save(registryRef.current).then((ok) => {
+        setSyncStatus(ok ? 'idle' : 'failed');
+      });
+    };
+
+    window.addEventListener('online', onOnline);
+
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('online', onOnline);
+    };
+  }, [isHydrated]);
 
   const createRecord = useCallback((category: AssetCategory, draft: HydroRecordDraft) => {
     setRegistry((current) => {
@@ -120,6 +179,18 @@ export function HydroRegistryProvider({ children }: { children: ReactNode }) {
     setRegistry(cloneDefaults());
   }, []);
 
+  const retrySync = useCallback(async () => {
+    setSyncStatus('syncing');
+    try {
+      const ok = await hydroRegistryRepository.save(registryRef.current);
+      setSyncStatus(ok ? 'idle' : 'failed');
+      return ok;
+    } catch {
+      setSyncStatus('failed');
+      return false;
+    }
+  }, []);
+
   const allRecords = useMemo(
     () => categoryOrder.flatMap((category) => registry[category]),
     [registry],
@@ -130,6 +201,8 @@ export function HydroRegistryProvider({ children }: { children: ReactNode }) {
       registry,
       allRecords,
       backend: hydroRegistryRepository.backend,
+      syncStatus,
+      retrySync,
       createRecord,
       updateRecord,
       deleteRecord,

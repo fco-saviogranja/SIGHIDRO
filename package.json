@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:e2e": "playwright test --project=chromium"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -30,15 +33,23 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.4.3",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^25.8.0",
     "@types/react": "18.2.0",
     "@types/react-dom": "18.2.0",
     "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.4.20",
+    "jsdom": "^29.1.1",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
     "typescript": "^6.0.3",
-    "vite": "^8.0.13"
+    "vite": "^8.0.13",
+    "vitest": "^0.34.4",
+    "whatwg-fetch": "^3.6.2",
+    "@playwright/test": "^1.39.2",
+    "playwright": "^1.39.2"
   }
 }

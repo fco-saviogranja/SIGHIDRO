@@ -19,7 +19,7 @@ import OperationalLeafletMap from '../components/OperationalLeafletMap';
 import { PanelHeader } from '../components/PanelHeader';
 
 function Dashboard() {
-  const { allRecords, registry } = useHydroRegistry();
+  const { allRecords, registry, syncStatus, retrySync, backend } = useHydroRegistry();
   const indicators = useMemo(() => makeIndicators(registry), [registry]);
   const dashboardAlerts = useMemo(() => makeAlerts(allRecords), [allRecords]);
   const maintenanceRows = useMemo(() => makeMaintenances(allRecords), [allRecords]);
@@ -47,6 +47,20 @@ function Dashboard() {
           <span>
             <CircleGauge size={18} />
             {dashboardAlerts.length} alertas em triagem
+          </span>
+          <span>
+            {backend === 'api' ? (
+              <>
+                <strong>
+                  {syncStatus === 'syncing' ? 'Sincronizando…' : syncStatus === 'failed' ? 'Sincronização pendente' : 'Sincronizado'}
+                </strong>
+                <button className="ghost-action sync-action" type="button" onClick={() => { void retrySync(); }}>
+                  Sincronizar
+                </button>
+              </>
+            ) : (
+              <em>Modo local</em>
+            )}
           </span>
         </div>
       </section>

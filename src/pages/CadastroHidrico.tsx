@@ -45,7 +45,7 @@ const makeDraft = (category: AssetCategory): HydroRecordDraft => ({
 });
 
 function CadastroHidrico() {
-  const { registry, createRecord, updateRecord, deleteRecord, resetRegistry } = useHydroRegistry();
+  const { registry, createRecord, updateRecord, deleteRecord, resetRegistry, syncStatus, retrySync, backend } = useHydroRegistry();
   const [activeCategory, setActiveCategory] = useState<AssetCategory>('poço');
   const [draft, setDraft] = useState<HydroRecordDraft>(() => makeDraft('poço'));
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -145,6 +145,20 @@ function CadastroHidrico() {
           <span className="eyebrow">Cadastro Hídrico</span>
           <h1>Base institucional de ativos e localidades</h1>
           <p>Cadastro com persistência local e sincronização via API quando autenticado.</p>
+          <p className="sync-info">
+            {backend === 'api' ? (
+              <>
+                <strong>
+                  {syncStatus === 'syncing' ? 'Sincronizando…' : syncStatus === 'failed' ? 'Sincronização pendente' : 'Sincronizado'}
+                </strong>
+                <button className="ghost-action sync-action" type="button" onClick={() => { void retrySync(); }}>
+                  Sincronizar
+                </button>
+              </>
+            ) : (
+              <em>Modo local</em>
+            )}
+          </p>
         </div>
         <button className="secondary-action" type="button" onClick={resetRegistry}>
           <RotateCcw size={18} />

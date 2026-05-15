@@ -5,6 +5,7 @@ import App from './App';
 import { AuthProvider } from './AuthContext';
 import 'leaflet/dist/leaflet.css';
 import './index.css';
+import './sync.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

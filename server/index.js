@@ -25,6 +25,13 @@ const pool = new Pool({
     : false,
 });
 
+// If database is unavailable we can fall back to a simple in-memory store
+let useInMemoryDb = false;
+const inMemoryStore = {
+  users: new Map(), // email -> { id, email, password_hash, role }
+  registry: new Map(), // userId -> data
+};
+
 const corsOrigin = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
   : true;
@@ -91,6 +98,23 @@ const ensureAdminUser = async () => {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+
+  if (useInMemoryDb) {
+    // In-memory user seeding
+    const existing = Array.from(inMemoryStore.users.values()).find((u) => u.email === email);
+    if (existing) {
+      existing.password_hash = passwordHash;
+      existing.role = 'admin';
+      console.log(`Admin user ensured (in-memory): ${email}`);
+      return;
+    }
+
+    const user = { id: crypto.randomUUID(), email, password_hash: passwordHash, role: 'admin' };
+    inMemoryStore.users.set(email, user);
+    console.log(`Admin user created (in-memory): ${email}`);
+    return;
+  }
+
   const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
 
   if (existing.rows.length > 0) {
@@ -157,6 +181,18 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters.' });
     }
 
+    if (useInMemoryDb) {
+      const existing = Array.from(inMemoryStore.users.values()).find((u) => u.email === normalizedEmail);
+      if (existing) {
+        return res.status(409).json({ error: 'Email already registered.' });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      const user = { id: crypto.randomUUID(), email: normalizedEmail, password_hash: passwordHash, role: 'operator' };
+      inMemoryStore.users.set(normalizedEmail, user);
+      return res.status(201).json({ user: { id: user.id, email: user.email, role: user.role } });
+    }
+
     const existing = await pool.query('SELECT id FROM users WHERE email = $1', [normalizedEmail]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'Email already registered.' });
@@ -188,6 +224,15 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 
+    if (useInMemoryDb) {
+      const user = Array.from(inMemoryStore.users.values()).find((u) => u.email === normalizedEmail);
+      if (!user) return res.status(401).json({ error: 'Invalid credentials.' });
+      const matches = await bcrypt.compare(password, user.password_hash);
+      if (!matches) return res.status(401).json({ error: 'Invalid credentials.' });
+      const token = signToken({ id: user.id, email: user.email, role: user.role });
+      return res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+    }
+
     const result = await pool.query('SELECT id, email, password_hash, role FROM users WHERE email = $1', [normalizedEmail]);
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid credentials.' });
@@ -209,6 +254,11 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/registry', requireAuth, async (req, res) => {
   try {
+    if (useInMemoryDb) {
+      const data = inMemoryStore.registry.get(req.user.id) || null;
+      return res.json({ data });
+    }
+
     const result = await pool.query('SELECT data FROM hydro_registry WHERE user_id = $1', [req.user.id]);
     if (result.rows.length === 0) {
       return res.json({ data: null });
@@ -226,6 +276,11 @@ app.put('/api/registry', requireAuth, async (req, res) => {
     const registry = normalizeRegistryPayload(req.body);
     if (!registry) {
       return res.status(400).json({ error: 'Invalid registry payload.' });
+    }
+
+    if (useInMemoryDb) {
+      inMemoryStore.registry.set(req.user.id, registry);
+      return res.json({ data: registry });
     }
 
     await pool.query(
@@ -246,14 +301,27 @@ app.put('/api/registry', requireAuth, async (req, res) => {
 });
 
 const start = async () => {
-  await ensureSchema();
-  await ensureAdminUser();
-  app.listen(port, () => {
-    console.log(`SIGHIDRO API listening on ${port}`);
-  });
+  try {
+    await ensureSchema();
+    await ensureAdminUser();
+    app.listen(port, () => {
+      console.log(`SIGHIDRO API listening on ${port}`);
+    });
+  } catch (error) {
+    console.warn('Startup error, falling back to in-memory DB:', error && error.message ? error.message : error);
+    useInMemoryDb = true;
+    try {
+      await ensureAdminUser();
+    } catch (err) {
+      console.warn('Failed to seed admin user in-memory:', err && err.message ? err.message : err);
+    }
+    app.listen(port, () => {
+      console.log(`SIGHIDRO API listening on ${port} (in-memory mode)`);
+    });
+  }
 };
 
 start().catch((error) => {
-  console.error('Startup error', error);
+  console.error('Critical startup error', error);
   process.exit(1);
 });

@@ -9,7 +9,8 @@ const STORAGE_KEY = 'sighidro:hydro-registry:v1';
 export type HydroRegistryRepository = {
   backend: 'localStorage' | 'api';
   load: () => Promise<HydroRegistry>;
-  save: (registry: HydroRegistry) => Promise<void>;
+  // save returns true when remote sync succeeded, false otherwise
+  save: (registry: HydroRegistry) => Promise<boolean>;
 };
 
 const cloneDefaultRegistry = (): HydroRegistry => JSON.parse(JSON.stringify(defaultHydroRegistry)) as HydroRegistry;
@@ -76,10 +77,11 @@ export const localHydroRegistryRepository: HydroRegistryRepository = {
   },
   async save(registry) {
     if (typeof window === 'undefined') {
-      return;
+      return true;
     }
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(registry));
+    return true;
   },
 };
 
@@ -117,11 +119,13 @@ export const apiHydroRegistryRepository: HydroRegistryRepository = {
     }
   },
   async save(registry) {
+    // Always persist locally first
     await localHydroRegistryRepository.save(registry);
 
     const authHeader = buildAuthHeader();
     if (!authHeader || typeof window === 'undefined' || typeof fetch === 'undefined') {
-      return;
+      // Auth not available or environment not suitable for network requests
+      return false;
     }
 
     try {
@@ -136,10 +140,12 @@ export const apiHydroRegistryRepository: HydroRegistryRepository = {
       });
 
       if (!response.ok) {
-        throw new Error(`API save failed with status ${response.status}`);
+        return false;
       }
+
+      return true;
     } catch {
-      return;
+      return false;
     }
   },
 };
