@@ -1,38 +1,21 @@
 import {
   AlertTriangle,
-  ArrowUpDown,
+  ArrowDownRight,
+  ArrowUpRight,
   CheckCircle2,
   CircleGauge,
   Droplets,
   Gauge,
   Map,
+  Waves,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useMemo, useState } from 'react';
-import {
-  AreaChart,
-  BarChart as TremorBarChart,
-  Card as TremorCard,
-  Metric,
-  Text,
-} from '@tremor/react';
-import {
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type SortingState,
-} from '@tanstack/react-table';
+import { useMemo } from 'react';
 import { useHydroRegistry } from '../HydroRegistryContext';
 import { flowSeries, productionSeries } from '../data';
 import { categoryMeta, statusLabel, systemModules } from '../metadata';
-import type { Alert, HydroRecord, Indicator, Maintenance, OperationalStatus } from '../types';
+import type { Alert, ChartPoint, HydroRecord, Indicator, Maintenance, OperationalStatus } from '../types';
 import { PanelHeader } from '../components/PanelHeader';
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 
 function Dashboard() {
   const { allRecords, registry } = useHydroRegistry();
@@ -205,19 +188,21 @@ function makeMaintenances(records: HydroRecord[]): Maintenance[] {
 }
 
 function KpiCard({ indicator }: { indicator: Indicator }) {
-  const trendVariant =
-    indicator.trend === 'up' ? 'success' : indicator.trend === 'down' ? 'warning' : 'secondary';
-  const trendLabel = indicator.trend === 'up' ? 'Alta' : indicator.trend === 'down' ? 'Queda' : 'Estavel';
+  const TrendIcon = indicator.trend === 'up' ? ArrowUpRight : indicator.trend === 'down' ? ArrowDownRight : CircleGauge;
+  const trendLabel = indicator.trend === 'up' ? 'Alta' : indicator.trend === 'down' ? 'Queda' : 'Estável';
 
   return (
-    <TremorCard className="kpi-card">
+    <article className={`kpi-card kpi-${indicator.trend}`}>
       <div className="kpi-topline">
-        <Text>{indicator.label}</Text>
-        <Badge variant={trendVariant}>{trendLabel}</Badge>
+        <span>{indicator.label}</span>
+        <span className="kpi-trend">
+          <TrendIcon size={15} />
+          {trendLabel}
+        </span>
       </div>
-      <Metric>{indicator.value}</Metric>
-      <Text className="kpi-detail">{indicator.detail}</Text>
-    </TremorCard>
+      <strong>{indicator.value}</strong>
+      <small>{indicator.detail}</small>
+    </article>
   );
 }
 
@@ -301,20 +286,12 @@ const flowValueFormatter = (value: number) => `${value} m³/h`;
 const productionValueFormatter = (value: number) => `${value}%`;
 
 function FlowChart({ data }: { data: Array<{ day: string; Vazao: number }> }) {
+  const points = data.map((point) => ({ label: point.day, value: point.Vazao }));
+
   return (
     <section className="panel chart-panel">
-      <PanelHeader title="Vazão hídrica diária" icon={<CircleGauge size={19} />} />
-      <div className="tremor-chart">
-        <AreaChart
-          data={data}
-          index="day"
-          categories={["Vazao"]}
-          colors={['cyan']}
-          valueFormatter={flowValueFormatter}
-          showLegend={false}
-          showAnimation
-        />
-      </div>
+      <PanelHeader title="Vazão hídrica diária" icon={<Waves size={19} />} />
+      <AreaSparkline points={points} />
       <div className="chart-summary">
         <strong>{flowValueFormatter(data.at(-1)?.Vazao ?? 0)}</strong>
         <span>Última leitura consolidada</span>
@@ -324,24 +301,63 @@ function FlowChart({ data }: { data: Array<{ day: string; Vazao: number }> }) {
 }
 
 function ProductionChart({ data }: { data: Array<{ month: string; Producao: number }> }) {
+  const points = data.map((point) => ({ label: point.month, value: point.Producao }));
+
   return (
     <section className="panel chart-panel">
       <PanelHeader title="Produção total mensal" icon={<CircleGauge size={19} />} />
-      <div className="tremor-chart">
-        <TremorBarChart
-          data={data}
-          index="month"
-          categories={["Producao"]}
-          colors={['blue']}
-          valueFormatter={productionValueFormatter}
-          showLegend={false}
-        />
-      </div>
+      <BarVisualization points={points} />
       <div className="chart-summary">
         <strong>{productionValueFormatter(data.at(-1)?.Producao ?? 0)}</strong>
         <span>Produção acumulada no mês</span>
       </div>
     </section>
+  );
+}
+
+function AreaSparkline({ points }: { points: ChartPoint[] }) {
+  const maxValue = Math.max(...points.map((point) => point.value), 1);
+  const polylinePoints = points
+    .map((point, index) => {
+      const x = (index / Math.max(points.length - 1, 1)) * 100;
+      const y = 92 - (point.value / maxValue) * 76;
+      return `${x},${y}`;
+    })
+    .join(' ');
+
+  return (
+    <div className="line-chart">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="flowGradient" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#2aa6b5" stopOpacity="0.34" />
+            <stop offset="100%" stopColor="#2aa6b5" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <polyline className="chart-area" points={`0,100 ${polylinePoints} 100,100`} />
+        <polyline className="chart-line" points={polylinePoints} />
+      </svg>
+      <div className="axis-labels">
+        {points.map((point) => (
+          <span key={point.label}>{point.label}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BarVisualization({ points }: { points: ChartPoint[] }) {
+  const maxValue = Math.max(...points.map((point) => point.value), 1);
+
+  return (
+    <div className="bar-chart">
+      {points.map((point) => (
+        <div className="bar-slot" key={point.label}>
+          <span style={{ height: `${(point.value / maxValue) * 100}%` }} />
+          <small>{point.label}</small>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -382,29 +398,26 @@ function AdvancedFilters() {
           <h2>Refino operacional</h2>
         </div>
         <div className="filters-actions">
-          <Button variant="ghost" size="sm" className="ghost-action" type="button">
+          <button className="ghost-action" type="button">
             Limpar
-          </Button>
-          <Button variant="secondary" size="sm" className="action-small" type="button">
+          </button>
+          <button className="secondary-small" type="button">
             Salvar visão
-          </Button>
-          <Button size="sm" className="action-small" type="button">
+          </button>
+          <button className="action-small" type="button">
             Aplicar filtros
-          </Button>
+          </button>
         </div>
       </div>
 
       <div className="filters-grid">
         <label className="filter-field">
           <span>Ativo / código</span>
-          <Input placeholder="POC-001, BMB-012..." />
+          <input placeholder="POC-001, BMB-012..." />
         </label>
         <label className="filter-field">
           <span>Tipo</span>
-          <select
-            defaultValue="all"
-            className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
-          >
+          <select defaultValue="all">
             <option value="all">Todos</option>
             <option value="poço">Poços</option>
             <option value="bomba">Bombas</option>
@@ -414,14 +427,11 @@ function AdvancedFilters() {
         </label>
         <label className="filter-field">
           <span>Localidade</span>
-          <Input placeholder="Zona 1, Brejinho..." />
+          <input placeholder="Zona 1, Brejinho..." />
         </label>
         <label className="filter-field">
           <span>Responsável</span>
-          <select
-            defaultValue="all"
-            className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
-          >
+          <select defaultValue="all">
             <option value="all">Todos</option>
             <option value="operador">Operador Hidráulico</option>
             <option value="tecnico">Técnico de Campo</option>
@@ -431,10 +441,7 @@ function AdvancedFilters() {
         </label>
         <label className="filter-field">
           <span>Período</span>
-          <select
-            defaultValue="week"
-            className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
-          >
+          <select defaultValue="week">
             <option value="today">Hoje</option>
             <option value="week">Últimos 7 dias</option>
             <option value="month">Últimos 30 dias</option>
@@ -442,7 +449,7 @@ function AdvancedFilters() {
         </label>
         <label className="filter-field">
           <span>Nível mínimo</span>
-          <Input placeholder="% ou m³" />
+          <input placeholder="% ou m³" />
         </label>
       </div>
 
@@ -465,87 +472,6 @@ function AdvancedFilters() {
 }
 
 function AssetTable({ records }: { records: HydroRecord[] }) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const columns = useMemo<ColumnDef<HydroRecord>[]>(
-    () => [
-      {
-        accessorKey: 'code',
-        header: 'Código',
-      },
-      {
-        accessorKey: 'name',
-        header: 'Ativo',
-        cell: ({ getValue }) => <span className="font-semibold text-slate-900">{getValue<string>()}</span>,
-      },
-      {
-        id: 'category',
-        header: 'Categoria',
-        accessorFn: (row) => categoryMeta[row.category].label,
-      },
-      {
-        accessorKey: 'location',
-        header: 'Localidade',
-      },
-      {
-        id: 'status',
-        header: 'Status',
-        accessorFn: (row) => statusLabel[row.status],
-        cell: ({ row }) => {
-          const status = row.original.status;
-          const variant =
-            status === 'operando'
-              ? 'success'
-              : status === 'atenção'
-                ? 'warning'
-                : status === 'parado'
-                  ? 'danger'
-                  : 'secondary';
-
-          return (
-            <span className="inline-flex items-center gap-2">
-              <i className={`status-dot status-${status}`} />
-              <Badge variant={variant}>{statusLabel[status]}</Badge>
-            </span>
-          );
-        },
-      },
-      {
-        accessorKey: 'responsible',
-        header: 'Responsável',
-      },
-      {
-        id: 'flowRate',
-        header: 'Vazão',
-        accessorFn: (row) => row.flowRate,
-        cell: ({ getValue }) => `${getValue<number>()} m³/h`,
-      },
-      {
-        id: 'level',
-        header: 'Nível/Capacidade',
-        accessorFn: (row) => resolveLevelOrCapacity(row),
-      },
-      {
-        id: 'energy',
-        header: 'Energia',
-        accessorFn: (row) => row.energyType ?? '-',
-      },
-      {
-        accessorKey: 'lastReading',
-        header: 'Última medição',
-      },
-    ],
-    [],
-  );
-
-  const table = useReactTable({
-    data: records,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
   return (
     <section className="panel table-panel">
       <PanelHeader title="Visão geral dos ativos" icon={<Droplets size={19} />} />
@@ -555,50 +481,44 @@ function AssetTable({ records }: { records: HydroRecord[] }) {
           <span>Atualizado agora pelo centro de controle</span>
         </div>
         <div className="table-actions">
-          <Button variant="ghost" size="sm" className="ghost-action" type="button">
+          <button className="ghost-action" type="button">
             Exportar
-          </Button>
-          <Button variant="ghost" size="sm" className="ghost-action" type="button">
+          </button>
+          <button className="ghost-action" type="button">
             Planilha
-          </Button>
+          </button>
         </div>
       </div>
-      <div className="asset-table" aria-label="Visão geral dos ativos hídricos">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="table-head">
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder ? null : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="table-sort"
-                        type="button"
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        <ArrowUpDown size={14} />
-                      </Button>
-                    )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} className="asset-row">
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      <div className="asset-table" role="table" aria-label="Visão geral dos ativos hídricos">
+        <div className="asset-row table-head" role="row">
+          <span>Código</span>
+          <span>Ativo</span>
+          <span>Categoria</span>
+          <span>Localidade</span>
+          <span>Status</span>
+          <span>Responsável</span>
+          <span>Vazão</span>
+          <span>Nível/Capacidade</span>
+          <span>Energia</span>
+          <span>Última medição</span>
+        </div>
+        {records.map((record) => (
+          <div className="asset-row" key={record.id} role="row">
+            <span>{record.code}</span>
+            <strong>{record.name}</strong>
+            <span>{categoryMeta[record.category].label}</span>
+            <span>{record.location}</span>
+            <span className="status-cell">
+              <i className={`status-dot status-${record.status}`} />
+              {statusLabel[record.status]}
+            </span>
+            <span>{record.responsible}</span>
+            <span>{record.flowRate} m³/h</span>
+            <span>{resolveLevelOrCapacity(record)}</span>
+            <span>{record.energyType ?? '-'}</span>
+            <span>{record.lastReading}</span>
+          </div>
+        ))}
       </div>
     </section>
   );
