@@ -1,5 +1,6 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { Edit3, Plus, RotateCcw, Save, Trash2, X } from 'lucide-react';
+import CoordinatePickerMap from '../components/CoordinatePickerMap';
 import { useHydroRegistry } from '../HydroRegistryContext';
 import {
   categoryMeta,
@@ -78,6 +79,14 @@ function CadastroHidrico() {
     value: string,
   ) => {
     updateDraft(field, value === '' ? undefined : Number(value));
+  };
+
+  const updateDraftCoordinates = (coordinates: { latitude: number; longitude: number }) => {
+    setDraft((current) => ({
+      ...current,
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+    }));
   };
 
   const startEdit = (record: HydroRecord) => {
@@ -304,6 +313,15 @@ function CadastroHidrico() {
                 onChange={(event) => updateNumericDraft('longitude', event.target.value)}
               />
             </label>
+
+            <div className="full-field coordinate-picker-field">
+              <span>Localização geográfica</span>
+              <CoordinatePickerMap
+                latitude={draft.latitude}
+                longitude={draft.longitude}
+                onChange={updateDraftCoordinates}
+              />
+            </div>
 
             <label className="full-field">
               Última medição
