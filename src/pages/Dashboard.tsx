@@ -27,7 +27,7 @@ import {
 import { useHydroRegistry } from '../HydroRegistryContext';
 import { flowSeries, productionSeries } from '../data';
 import { categoryMeta, statusLabel, systemModules } from '../metadata';
-import type { Alert, ChartPoint, HydroRecord, Indicator, Maintenance, OperationalStatus } from '../types';
+import type { Alert, HydroRecord, Indicator, Maintenance, OperationalStatus } from '../types';
 import { PanelHeader } from '../components/PanelHeader';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
