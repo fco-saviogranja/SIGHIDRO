@@ -1,129 +1,89 @@
-import {
-  Activity,
-  BarChart3,
-  ClipboardList,
-  Database,
-  FileCog,
-  ShieldCheck,
-} from 'lucide-react';
-import type { Alert, ChartPoint, Indicator, Maintenance, ModuleArea, WaterAsset } from './types';
+import type { Alert, ChartPoint, HydroRegistry, Maintenance } from './types';
 
-export const systemModules: ModuleArea[] = [
-  {
-    id: 'cadastro',
-    title: 'Cadastro Hídrico',
-    description: 'Base técnica de poços, bombas, reservatórios e localidades.',
-    items: ['Poços', 'Bombas', 'Reservatórios', 'Localidades'],
-    status: 'operando',
-    accent: 'blue',
-    icon: Database,
-  },
-  {
-    id: 'monitoramento',
-    title: 'Monitoramento Operacional',
-    description: 'Acompanhamento diário de vazão, níveis e consumo energético.',
-    items: ['Vazão', 'Nível da água', 'Horas de funcionamento', 'Energia'],
-    status: 'atenção',
-    accent: 'cyan',
-    icon: Activity,
-  },
-  {
-    id: 'manutencao',
-    title: 'Manutenção',
-    description: 'Ordens de serviço, trocas, preventiva e histórico técnico.',
-    items: ['Ordens de serviço', 'Trocas', 'Preventiva', 'Histórico'],
-    status: 'operando',
-    accent: 'green',
-    icon: ClipboardList,
-  },
-  {
-    id: 'inteligencia',
-    title: 'Inteligência Hídrica',
-    description: 'Indicadores, alertas e mapa operacional para decisão rápida.',
-    items: ['Gráficos', 'Alertas', 'Indicadores', 'Mapa operacional'],
-    status: 'operando',
-    accent: 'blue',
-    icon: BarChart3,
-  },
-  {
-    id: 'administrativo',
-    title: 'Controle Administrativo',
-    description: 'Usuários, auditoria, relatórios e patrimônio institucional.',
-    items: ['Usuários', 'Auditoria', 'Relatórios', 'Patrimônio'],
-    status: 'operando',
-    accent: 'amber',
-    icon: FileCog,
-  },
-];
-
-export const indicators: Indicator[] = [
-  {
-    label: 'Poços ativos',
-    value: '35',
-    detail: '3 com atenção operacional',
-    trend: 'stable',
-  },
-  {
-    label: 'Reservatório médio',
-    value: '78%',
-    detail: '+4% nas últimas 24h',
-    trend: 'up',
-  },
-  {
-    label: 'Bombas em manutenção',
-    value: '2',
-    detail: '1 preventiva programada',
-    trend: 'down',
-  },
-  {
-    label: 'Vazão diária',
-    value: '146 m³/h',
-    detail: 'queda localizada em Brejinho',
-    trend: 'down',
-  },
-];
-
-export const assets: WaterAsset[] = [
-  {
-    id: 'POC-001',
-    name: 'Poço Brejinho',
-    type: 'Poço',
-    location: 'Zona 1 - Brejinho',
-    status: 'atenção',
-    flowRate: 72,
-    reservoirLevel: 68,
-    lastReading: '14/05/2026 09:20',
-  },
-  {
-    id: 'POC-014',
-    name: 'Sítio Serra Boa',
-    type: 'Poço',
-    location: 'Zona 2 - Serra Boa',
-    status: 'operando',
-    flowRate: 91,
-    reservoirLevel: 81,
-    lastReading: '14/05/2026 08:55',
-  },
-  {
-    id: 'BMB-012',
-    name: 'Bomba SP 17-10',
-    type: 'Bomba',
-    location: 'Estação Centro',
-    status: 'manutenção',
-    flowRate: 0,
-    lastReading: '13/05/2026 17:40',
-  },
-  {
-    id: 'RES-003',
-    name: 'Reservatório São Francisco',
-    type: 'Reservatório',
-    location: 'Zona 3 - São Francisco',
-    status: 'operando',
-    flowRate: 64,
-    reservoirLevel: 86,
-    lastReading: '14/05/2026 09:10',
-  },
-];
+export const defaultHydroRegistry: HydroRegistry = {
+  poço: [
+    {
+      id: 'well-brejinho',
+      code: 'POC-001',
+      category: 'poço',
+      name: 'Poço Brejinho',
+      location: 'Zona 1 - Brejinho',
+      status: 'atenção',
+      responsible: 'Operador Hidráulico',
+      flowRate: 72,
+      reservoirLevel: 68,
+      powerHp: 15,
+      energyType: 'Rede elétrica',
+      depthMeters: 180,
+      lastReading: '14/05/2026 09:20',
+      notes: 'Queda de vazão em acompanhamento.',
+    },
+    {
+      id: 'well-serra-boa',
+      code: 'POC-014',
+      category: 'poço',
+      name: 'Sítio Serra Boa',
+      location: 'Zona 2 - Serra Boa',
+      status: 'operando',
+      responsible: 'Técnico de Campo',
+      flowRate: 91,
+      reservoirLevel: 81,
+      powerHp: 12,
+      energyType: 'Solar',
+      depthMeters: 162,
+      lastReading: '14/05/2026 08:55',
+      notes: 'Operação estável.',
+    },
+  ],
+  bomba: [
+    {
+      id: 'pump-sp-17-10',
+      code: 'BMB-012',
+      category: 'bomba',
+      name: 'Bomba SP 17-10',
+      location: 'Estação Centro',
+      status: 'manutenção',
+      responsible: 'Técnico de Campo',
+      flowRate: 0,
+      powerHp: 15,
+      energyType: 'Trifásica',
+      lastReading: '13/05/2026 17:40',
+      notes: 'Troca de rolamento programada.',
+    },
+  ],
+  reservatório: [
+    {
+      id: 'reservoir-sao-francisco',
+      code: 'RES-003',
+      category: 'reservatório',
+      name: 'Reservatório São Francisco',
+      location: 'Zona 3 - São Francisco',
+      status: 'operando',
+      responsible: 'Gestor Hídrico',
+      flowRate: 64,
+      reservoirLevel: 86,
+      capacityM3: 420,
+      lastReading: '14/05/2026 09:10',
+      notes: 'Nível regular para a faixa operacional.',
+    },
+  ],
+  localidade: [
+    {
+      id: 'locality-centro',
+      code: 'LOC-001',
+      category: 'localidade',
+      name: 'Jardim Centro',
+      location: 'Sede municipal',
+      status: 'operando',
+      responsible: 'Administração Central',
+      flowRate: 64,
+      reservoirLevel: 78,
+      capacityM3: 420,
+      lastReading: '14/05/2026 09:05',
+      notes: 'Zona com telemetria simulada ativa.',
+    },
+  ],
+};
 
 export const alerts: Alert[] = [
   {
@@ -194,10 +154,3 @@ export const productionSeries: ChartPoint[] = [
   { label: 'Mai', value: 82 },
   { label: 'Jun', value: 88 },
 ];
-
-export const userContext = {
-  name: 'Carlos Oliveira',
-  role: 'Gestor Hídrico',
-  department: 'Administração Central',
-  badgeIcon: ShieldCheck,
-};

@@ -1,0 +1,415 @@
+import {
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  CheckCircle2,
+  CircleGauge,
+  Droplets,
+  Gauge,
+  Map,
+  MoreVertical,
+  Waves,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useMemo } from 'react';
+import { useHydroRegistry } from '../HydroRegistryContext';
+import { flowSeries, productionSeries } from '../data';
+import { categoryMeta, statusLabel, systemModules } from '../metadata';
+import type { Alert, ChartPoint, HydroRecord, Indicator, Maintenance, OperationalStatus } from '../types';
+import { PanelHeader } from '../components/PanelHeader';
+
+function Dashboard() {
+  const { allRecords, registry } = useHydroRegistry();
+  const indicators = useMemo(() => makeIndicators(registry), [registry]);
+  const dashboardAlerts = useMemo(() => makeAlerts(allRecords), [allRecords]);
+  const maintenanceRows = useMemo(() => makeMaintenances(allRecords), [allRecords]);
+
+  return (
+    <main className="dashboard">
+      <section className="hero-strip">
+        <div>
+          <span className="eyebrow">Centro de Inteligência Hídrica Municipal</span>
+          <h1>Operação integrada do abastecimento público</h1>
+        </div>
+        <div className="hero-actions" aria-label="Indicadores rápidos">
+          <span>
+            <CheckCircle2 size={18} />
+            {Math.max(0, allRecords.filter((record) => record.status === 'operando').length)} ativos operando
+          </span>
+          <span>
+            <CircleGauge size={18} />
+            {dashboardAlerts.length} alertas em triagem
+          </span>
+        </div>
+      </section>
+
+      <section className="metrics-grid" aria-label="Indicadores operacionais">
+        {indicators.map((indicator) => (
+          <MetricCard key={indicator.label} indicator={indicator} />
+        ))}
+      </section>
+
+      <section className="operations-grid">
+        <OperationalMap records={allRecords} />
+        <AlertPanel alerts={dashboardAlerts} />
+      </section>
+
+      <section className="analytics-grid">
+        <LineChart title="Vazão hídrica diária" points={flowSeries} unit="m³/h" />
+        <BarChart title="Produção total mensal" points={productionSeries} unit="%" />
+        <MaintenancePanel rows={maintenanceRows} />
+      </section>
+
+      <section className="modules-section">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">Estrutura modular</span>
+            <h2>Módulos do SIGHIDRO</h2>
+          </div>
+          <span className="section-note">Base preparada para expansão operacional e administrativa.</span>
+        </div>
+        <div className="modules-grid">
+          {systemModules.slice(0, 5).map((module) => {
+            const Icon = module.icon;
+
+            return (
+              <Link className={`module-card accent-${module.accent}`} key={module.id} to={module.path}>
+                <div className="module-topline">
+                  <span className="module-icon">
+                    <Icon size={22} />
+                  </span>
+                  <span className={`status-pill status-${module.status}`}>{statusLabel[module.status]}</span>
+                </div>
+                <h3>{module.title}</h3>
+                <p>{module.description}</p>
+                <div className="module-items">
+                  {module.items.map((item) => (
+                    <span key={item}>{item}</span>
+                  ))}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      <AssetTable records={allRecords} />
+    </main>
+  );
+}
+
+function makeIndicators(registry: ReturnType<typeof useHydroRegistry>['registry']): Indicator[] {
+  const wells = registry.poço;
+  const pumps = registry.bomba;
+  const reservoirs = registry.reservatório;
+  const activeWells = wells.filter((record) => record.status === 'operando').length;
+  const attentionWells = wells.filter((record) => record.status === 'atenção').length;
+  const reservoirLevels = reservoirs
+    .map((record) => record.reservoirLevel)
+    .filter((level): level is number => typeof level === 'number');
+  const reservoirAverage = reservoirLevels.length
+    ? Math.round(reservoirLevels.reduce((total, level) => total + level, 0) / reservoirLevels.length)
+    : 0;
+  const pumpMaintenance = pumps.filter((record) => record.status === 'manutenção').length;
+  const totalFlow = [...wells, ...reservoirs].reduce((total, record) => total + Number(record.flowRate || 0), 0);
+
+  return [
+    {
+      label: 'Poços ativos',
+      value: String(activeWells),
+      detail: `${attentionWells} com atenção operacional`,
+      trend: attentionWells > 0 ? 'stable' : 'up',
+    },
+    {
+      label: 'Reservatório médio',
+      value: `${reservoirAverage}%`,
+      detail: `${reservoirs.length} reservatório(s) cadastrado(s)`,
+      trend: reservoirAverage >= 70 ? 'up' : 'down',
+    },
+    {
+      label: 'Bombas em manutenção',
+      value: String(pumpMaintenance),
+      detail: `${pumps.length} bomba(s) no cadastro`,
+      trend: pumpMaintenance > 0 ? 'down' : 'stable',
+    },
+    {
+      label: 'Vazão cadastrada',
+      value: `${totalFlow} m³/h`,
+      detail: 'soma dos ativos monitorados',
+      trend: totalFlow > 120 ? 'up' : 'stable',
+    },
+  ];
+}
+
+function makeAlerts(records: HydroRecord[]): Alert[] {
+  const severityByStatus: Partial<Record<OperationalStatus, Alert['severity']>> = {
+    atenção: 'warning',
+    parado: 'critical',
+    manutenção: 'warning',
+  };
+
+  return records
+    .filter((record) => record.status !== 'operando')
+    .slice(0, 3)
+    .map((record, index) => ({
+      id: `ALT-${record.id}`,
+      title:
+        record.status === 'parado'
+          ? 'Ativo parado'
+          : record.status === 'manutenção'
+            ? 'Manutenção em andamento'
+            : 'Atenção operacional',
+      source: record.name,
+      severity: severityByStatus[record.status] ?? 'info',
+      time: index === 0 ? 'há 18 min' : index === 1 ? 'hoje' : 'há 2h',
+    }));
+}
+
+function makeMaintenances(records: HydroRecord[]): Maintenance[] {
+  return records
+    .filter((record) => record.status === 'manutenção' || record.status === 'atenção')
+    .slice(0, 3)
+    .map((record, index) => ({
+      id: `OS-${record.id}`,
+      asset: record.name,
+      service: record.status === 'manutenção' ? 'Intervenção técnica' : 'Verificação operacional',
+      profile: record.responsible,
+      dueIn: index === 0 ? 'Hoje' : `${index + 2} dias`,
+      status: record.status,
+    }));
+}
+
+function MetricCard({ indicator }: { indicator: Indicator }) {
+  const TrendIcon = indicator.trend === 'up' ? ArrowUpRight : indicator.trend === 'down' ? ArrowDownRight : CircleGauge;
+
+  return (
+    <article className={`metric-card trend-${indicator.trend}`}>
+      <div className="card-menu">
+        <TrendIcon size={20} />
+        <button type="button" aria-label={`Opções de ${indicator.label}`}>
+          <MoreVertical size={18} />
+        </button>
+      </div>
+      <span>{indicator.label}</span>
+      <strong>{indicator.value}</strong>
+      <small>{indicator.detail}</small>
+    </article>
+  );
+}
+
+function OperationalMap({ records }: { records: HydroRecord[] }) {
+  const coordinates = [
+    { x: 66, y: 34 },
+    { x: 25, y: 52 },
+    { x: 49, y: 47 },
+    { x: 31, y: 72 },
+    { x: 71, y: 66 },
+  ];
+  const mapMarkers = records.slice(0, 5).map((record, index) => ({
+    ...record,
+    ...coordinates[index],
+  }));
+
+  return (
+    <section className="panel map-panel" id="mapa">
+      <PanelHeader title="Mapa operacional" icon={<Map size={19} />} />
+      <div className="map-canvas" role="img" aria-label="Mapa operacional simulado com poços, reservatórios e rede">
+        <svg className="pipeline-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path className="main-pipeline" d="M8 66 C25 55, 36 49, 51 48 S78 41, 94 29" />
+          <path className="secondary-pipeline" d="M28 75 C39 67, 45 57, 49 49 S60 38, 67 34" />
+          <path className="pressure-line" d="M49 48 C54 57, 61 62, 73 66" />
+          <path className="warning-line" d="M31 72 C25 66, 22 59, 25 52" />
+        </svg>
+        <div className="terrain-label label-north">Serra Boa</div>
+        <div className="terrain-label label-center">Jardim Centro</div>
+        <div className="terrain-label label-east">Brejinho</div>
+        {mapMarkers.map((marker) => (
+          <button
+            className={`map-marker status-${marker.status}`}
+            key={marker.id}
+            style={{ left: `${marker.x}%`, top: `${marker.y}%` }}
+            type="button"
+            aria-label={`${marker.name}: ${statusLabel[marker.status]}`}
+          >
+            <span />
+          </button>
+        ))}
+        <div className="map-legend">
+          <span>
+            <i className="legend-dot operando" />
+            Operando
+          </span>
+          <span>
+            <i className="legend-dot atenção" />
+            Atenção
+          </span>
+          <span>
+            <i className="legend-dot parado" />
+            Parado
+          </span>
+          <span>
+            <i className="legend-line" />
+            Rede
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AlertPanel({ alerts }: { alerts: Alert[] }) {
+  return (
+    <section className="panel alert-panel">
+      <PanelHeader title="Alertas críticos" icon={<AlertTriangle size={19} />} />
+      <div className="alert-list">
+        {alerts.length ? alerts.map((alert) => <AlertRow key={alert.id} alert={alert} />) : <EmptyState text="Sem alertas críticos no cadastro atual." />}
+      </div>
+    </section>
+  );
+}
+
+function AlertRow({ alert }: { alert: Alert }) {
+  return (
+    <article className={`alert-row severity-${alert.severity}`}>
+      <span className="severity-icon">
+        <AlertTriangle size={18} />
+      </span>
+      <div>
+        <strong>{alert.title}</strong>
+        <span>{alert.source}</span>
+      </div>
+      <time>{alert.time}</time>
+    </article>
+  );
+}
+
+function LineChart({ title, points, unit }: { title: string; points: ChartPoint[]; unit: string }) {
+  const maxValue = Math.max(...points.map((point) => point.value));
+  const polylinePoints = points
+    .map((point, index) => {
+      const x = (index / (points.length - 1)) * 100;
+      const y = 96 - (point.value / maxValue) * 82;
+      return `${x},${y}`;
+    })
+    .join(' ');
+
+  return (
+    <section className="panel chart-panel">
+      <PanelHeader title={title} icon={<Waves size={19} />} />
+      <div className="line-chart">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="flowGradient" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#0891b2" stopOpacity="0.36" />
+              <stop offset="100%" stopColor="#0891b2" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <polyline className="chart-area" points={`0,100 ${polylinePoints} 100,100`} />
+          <polyline className="chart-line" points={polylinePoints} />
+        </svg>
+        <div className="axis-labels">
+          {points.map((point) => (
+            <span key={point.label}>{point.label}</span>
+          ))}
+        </div>
+      </div>
+      <div className="chart-summary">
+        <strong>{points.at(-1)?.value} {unit}</strong>
+        <span>Última leitura consolidada</span>
+      </div>
+    </section>
+  );
+}
+
+function BarChart({ title, points, unit }: { title: string; points: ChartPoint[]; unit: string }) {
+  const maxValue = Math.max(...points.map((point) => point.value));
+
+  return (
+    <section className="panel chart-panel">
+      <PanelHeader title={title} icon={<CircleGauge size={19} />} />
+      <div className="bar-chart">
+        {points.map((point) => (
+          <div className="bar-slot" key={point.label}>
+            <span style={{ height: `${(point.value / maxValue) * 100}%` }} />
+            <small>{point.label}</small>
+          </div>
+        ))}
+      </div>
+      <div className="chart-summary">
+        <strong>{points.at(-1)?.value}{unit}</strong>
+        <span>Produção acumulada no mês</span>
+      </div>
+    </section>
+  );
+}
+
+function MaintenancePanel({ rows }: { rows: Maintenance[] }) {
+  return (
+    <section className="panel maintenance-panel">
+      <PanelHeader title="Manutenção" icon={<Gauge size={19} />} />
+      <div className="maintenance-list">
+        {rows.length ? rows.map((maintenance) => <MaintenanceRow key={maintenance.id} maintenance={maintenance} />) : <EmptyState text="Sem manutenção pendente." />}
+      </div>
+      <div className="repair-time">
+        <span>Tempo médio de reparo</span>
+        <strong>4.2h</strong>
+      </div>
+    </section>
+  );
+}
+
+function MaintenanceRow({ maintenance }: { maintenance: Maintenance }) {
+  return (
+    <article className="maintenance-row">
+      <span className={`status-dot status-${maintenance.status}`} />
+      <div>
+        <strong>{maintenance.service}</strong>
+        <span>{maintenance.asset}</span>
+      </div>
+      <time>{maintenance.dueIn}</time>
+    </article>
+  );
+}
+
+function AssetTable({ records }: { records: HydroRecord[] }) {
+  return (
+    <section className="panel table-panel">
+      <PanelHeader title="Visão geral dos ativos" icon={<Droplets size={19} />} />
+      <div className="asset-table" role="table" aria-label="Visão geral dos ativos hídricos">
+        <div className="asset-row table-head" role="row">
+          <span>Código</span>
+          <span>Nome</span>
+          <span>Tipo</span>
+          <span>Status</span>
+          <span>Vazão</span>
+          <span>Última medição</span>
+        </div>
+        {records.map((record) => (
+          <AssetRow key={record.id} record={record} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AssetRow({ record }: { record: HydroRecord }) {
+  return (
+    <div className="asset-row" role="row">
+      <span>{record.code}</span>
+      <strong>{record.name}</strong>
+      <span>{categoryMeta[record.category].label}</span>
+      <span>
+        <i className={`status-dot status-${record.status}`} />
+        {statusLabel[record.status]}
+      </span>
+      <span>{record.flowRate} m³/h</span>
+      <span>{record.lastReading}</span>
+    </div>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  return <div className="empty-state">{text}</div>;
+}
+
+export default Dashboard;
