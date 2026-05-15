@@ -24,8 +24,9 @@ services:
           name: sighidro-db
           property: connectionString
 
-  - type: static_site
+  - type: web
     name: sighidro-web
+    runtime: static
     plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: dist
