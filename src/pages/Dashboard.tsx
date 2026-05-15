@@ -93,6 +93,7 @@ function Dashboard() {
         </div>
       </section>
 
+      <AdvancedFilters />
       <AssetTable records={allRecords} />
     </main>
   );
@@ -198,22 +199,13 @@ function MetricCard({ indicator }: { indicator: Indicator }) {
 }
 
 function OperationalMap({ records }: { records: HydroRecord[] }) {
-  const coordinates = [
-    { x: 66, y: 34 },
-    { x: 25, y: 52 },
-    { x: 49, y: 47 },
-    { x: 31, y: 72 },
-    { x: 71, y: 66 },
-  ];
-  const mapMarkers = records.slice(0, 5).map((record, index) => ({
-    ...record,
-    ...coordinates[index],
-  }));
+  const markerPositions = ['marker-pos-1', 'marker-pos-2', 'marker-pos-3', 'marker-pos-4', 'marker-pos-5'];
+  const mapMarkers = records.slice(0, 5);
 
   return (
     <section className="panel map-panel" id="mapa">
       <PanelHeader title="Mapa operacional" icon={<Map size={19} />} />
-      <div className="map-canvas" role="img" aria-label="Mapa operacional simulado com poços, reservatórios e rede">
+      <div className="map-canvas" aria-label="Mapa operacional simulado com poços, reservatórios e rede">
         <svg className="pipeline-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <path className="main-pipeline" d="M8 66 C25 55, 36 49, 51 48 S78 41, 94 29" />
           <path className="secondary-pipeline" d="M28 75 C39 67, 45 57, 49 49 S60 38, 67 34" />
@@ -223,11 +215,10 @@ function OperationalMap({ records }: { records: HydroRecord[] }) {
         <div className="terrain-label label-north">Serra Boa</div>
         <div className="terrain-label label-center">Jardim Centro</div>
         <div className="terrain-label label-east">Brejinho</div>
-        {mapMarkers.map((marker) => (
+        {mapMarkers.map((marker, index) => (
           <button
-            className={`map-marker status-${marker.status}`}
+            className={`map-marker ${markerPositions[index]} status-${marker.status}`}
             key={marker.id}
-            style={{ left: `${marker.x}%`, top: `${marker.y}%` }}
             type="button"
             aria-label={`${marker.name}: ${statusLabel[marker.status]}`}
           >
@@ -323,14 +314,19 @@ function LineChart({ title, points, unit }: { title: string; points: ChartPoint[
 
 function BarChart({ title, points, unit }: { title: string; points: ChartPoint[]; unit: string }) {
   const maxValue = Math.max(...points.map((point) => point.value));
+  const barHeights = points.map((point) => Math.round((point.value / maxValue) * 100));
+  const barStyles = barHeights
+    .map((height, index) => `.bar-fill-${index}{height:${height}%;}`)
+    .join('');
 
   return (
     <section className="panel chart-panel">
       <PanelHeader title={title} icon={<CircleGauge size={19} />} />
+      <style>{barStyles}</style>
       <div className="bar-chart">
-        {points.map((point) => (
+        {points.map((point, index) => (
           <div className="bar-slot" key={point.label}>
-            <span style={{ height: `${(point.value / maxValue) * 100}%` }} />
+            <span className={`bar-fill-${index}`} />
             <small>{point.label}</small>
           </div>
         ))}
@@ -371,17 +367,117 @@ function MaintenanceRow({ maintenance }: { maintenance: Maintenance }) {
   );
 }
 
+function AdvancedFilters() {
+  return (
+    <section className="panel filters-panel" aria-label="Filtros avançados do dashboard">
+      <div className="filters-header">
+        <div>
+          <span className="eyebrow">Filtros avançados</span>
+          <h2>Refino operacional</h2>
+        </div>
+        <div className="filters-actions">
+          <button className="ghost-action" type="button">
+            Limpar
+          </button>
+          <button className="secondary-action action-small" type="button">
+            Salvar visão
+          </button>
+          <button className="primary-action action-small" type="button">
+            Aplicar filtros
+          </button>
+        </div>
+      </div>
+
+      <div className="filters-grid">
+        <label className="filter-field">
+          <span>Ativo / código</span>
+          <input placeholder="POC-001, BMB-012..." />
+        </label>
+        <label className="filter-field">
+          <span>Tipo</span>
+          <select defaultValue="all">
+            <option value="all">Todos</option>
+            <option value="poço">Poços</option>
+            <option value="bomba">Bombas</option>
+            <option value="reservatório">Reservatórios</option>
+            <option value="localidade">Localidades</option>
+          </select>
+        </label>
+        <label className="filter-field">
+          <span>Localidade</span>
+          <input placeholder="Zona 1, Brejinho..." />
+        </label>
+        <label className="filter-field">
+          <span>Responsável</span>
+          <select defaultValue="all">
+            <option value="all">Todos</option>
+            <option value="operador">Operador Hidráulico</option>
+            <option value="tecnico">Técnico de Campo</option>
+            <option value="gestor">Gestor Hídrico</option>
+            <option value="admin">Administração Central</option>
+          </select>
+        </label>
+        <label className="filter-field">
+          <span>Período</span>
+          <select defaultValue="week">
+            <option value="today">Hoje</option>
+            <option value="week">Últimos 7 dias</option>
+            <option value="month">Últimos 30 dias</option>
+          </select>
+        </label>
+        <label className="filter-field">
+          <span>Nível mínimo</span>
+          <input placeholder="% ou m³" />
+        </label>
+      </div>
+
+      <div className="filters-chips" aria-label="Filtros por status">
+        <button className="filter-chip active" type="button">
+          Operando
+        </button>
+        <button className="filter-chip" type="button">
+          Atenção
+        </button>
+        <button className="filter-chip" type="button">
+          Parado
+        </button>
+        <button className="filter-chip" type="button">
+          Manutenção
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function AssetTable({ records }: { records: HydroRecord[] }) {
   return (
     <section className="panel table-panel">
       <PanelHeader title="Visão geral dos ativos" icon={<Droplets size={19} />} />
-      <div className="asset-table" role="table" aria-label="Visão geral dos ativos hídricos">
-        <div className="asset-row table-head" role="row">
+      <div className="table-toolbar">
+        <div>
+          <strong>{records.length} ativos monitorados</strong>
+          <span>Atualizado agora pelo centro de controle</span>
+        </div>
+        <div className="table-actions">
+          <button className="ghost-action" type="button">
+            Exportar
+          </button>
+          <button className="ghost-action" type="button">
+            Planilha
+          </button>
+        </div>
+      </div>
+      <div className="asset-table" aria-label="Visão geral dos ativos hídricos">
+        <div className="asset-row table-head">
           <span>Código</span>
-          <span>Nome</span>
-          <span>Tipo</span>
+          <span>Ativo</span>
+          <span>Categoria</span>
+          <span>Localidade</span>
           <span>Status</span>
+          <span>Responsável</span>
           <span>Vazão</span>
+          <span>Nível/Capacidade</span>
+          <span>Energia</span>
           <span>Última medição</span>
         </div>
         {records.map((record) => (
@@ -393,16 +489,28 @@ function AssetTable({ records }: { records: HydroRecord[] }) {
 }
 
 function AssetRow({ record }: { record: HydroRecord }) {
+  const levelOrCapacity =
+    typeof record.reservoirLevel === 'number'
+      ? `${record.reservoirLevel}%`
+      : typeof record.capacityM3 === 'number'
+        ? `${record.capacityM3} m³`
+        : '-';
+  const energyType = record.energyType ?? '-';
+
   return (
-    <div className="asset-row" role="row">
+    <div className="asset-row">
       <span>{record.code}</span>
       <strong>{record.name}</strong>
       <span>{categoryMeta[record.category].label}</span>
+      <span>{record.location}</span>
       <span>
         <i className={`status-dot status-${record.status}`} />
         {statusLabel[record.status]}
       </span>
+      <span>{record.responsible}</span>
       <span>{record.flowRate} m³/h</span>
+      <span>{levelOrCapacity}</span>
+      <span>{energyType}</span>
       <span>{record.lastReading}</span>
     </div>
   );
