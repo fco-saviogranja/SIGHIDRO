@@ -45,9 +45,57 @@ function App() {
 function AppShell() {
   return (
     <div className="app-shell">
-      <Header />
-      <Outlet />
+      <Sidebar />
+      <div className="app-body">
+        <Header />
+        <Outlet />
+      </div>
     </div>
+  );
+}
+
+function Sidebar() {
+  const BadgeIcon = userContext.badgeIcon;
+
+  return (
+    <aside className="sidebar">
+      <NavLink className="brand-lockup sidebar-brand" to="/" aria-label="Ir para o dashboard">
+        <div className="brand-mark" aria-hidden="true">
+          <Droplets size={26} />
+        </div>
+        <div>
+          <strong>SIGHIDRO</strong>
+          <span>Plataforma operacional do SAAE de Jardim</span>
+        </div>
+      </NavLink>
+
+      <div className="sidebar-section">
+        <span className="sidebar-label">Navegação</span>
+        <nav className="sidebar-nav" aria-label="Navegação principal">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <NavLink end={item.path === '/'} key={item.path} to={item.path}>
+                <Icon size={18} />
+                {item.label}
+              </NavLink>
+            );
+          })}
+        </nav>
+      </div>
+
+      <div className="sidebar-section">
+        <span className="sidebar-label">Perfil</span>
+        <div className="sidebar-profile">
+          <BadgeIcon size={18} />
+          <div>
+            <strong>{userContext.name}</strong>
+            <small>{userContext.role}</small>
+          </div>
+        </div>
+      </div>
+    </aside>
   );
 }
 
@@ -78,17 +126,31 @@ function Header() {
 
   return (
     <header className="topbar">
-      <NavLink className="brand-lockup" to="/" aria-label="Ir para o dashboard">
-        <div className="brand-mark" aria-hidden="true">
-          <Droplets size={28} />
+      <div className="topbar-title">
+        <div className="topbar-brand" aria-hidden="true">
+          <div className="brand-mark">
+            <Droplets size={22} />
+          </div>
+          <span>SIGHIDRO</span>
         </div>
-        <div>
-          <strong>SIGHIDRO</strong>
-          <span>Sistema Integrado de Gestão Hídrica do SAAE de Jardim</span>
-        </div>
-      </NavLink>
+        <span className="eyebrow">Centro operacional</span>
+        <strong>Visão consolidada de ativos e desempenho</strong>
+      </div>
 
-      {renderNav('desktop-nav')}
+      <div className="topbar-filters" aria-label="Filtros rápidos">
+        <label className="search-field">
+          <span>Buscar</span>
+          <input aria-label="Buscar ativos" placeholder="Buscar poço, bomba ou localidade" />
+        </label>
+        <label className="filter-field">
+          <span>Período</span>
+          <select aria-label="Selecionar período">
+            <option>Hoje</option>
+            <option>Últimos 7 dias</option>
+            <option>Últimos 30 dias</option>
+          </select>
+        </label>
+      </div>
 
       <div className="topbar-actions">
         <button className="icon-button" type="button" aria-label="Notificações">
@@ -121,7 +183,6 @@ function Header() {
           className="menu-button"
           type="button"
           aria-label={isMenuOpen ? 'Fechar menu' : 'Abrir menu'}
-          aria-expanded={isMenuOpen ? 'true' : 'false'}
           onClick={() => setIsMenuOpen((current) => !current)}
         >
           {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
