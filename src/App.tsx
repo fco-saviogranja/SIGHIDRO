@@ -134,13 +134,7 @@ function Header() {
     >
       <div className="container flex h-16 max-w-screen-2xl items-center gap-7 px-4 md:px-8">
         <NavLink className="flex min-w-[150px] items-center gap-3 mr-3" to="/dashboard" aria-label="Ir para o dashboard">
-          <div
-            className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm ring-1 ${
-              isDark
-                ? 'from-cyan-300 to-emerald-300 text-slate-950 ring-white/20'
-                : 'from-cyan-500 to-emerald-500 text-white ring-cyan-200'
-            }`}
-          >
+          <div className="app-brand-mark">
             <Droplets className="w-5 h-5" />
           </div>
           <div className="hidden md:flex flex-col">
@@ -215,11 +209,7 @@ function Header() {
             <SheetContent side="right" className={`w-[300px] sm:w-[400px] ${shellPanelClass}`}>
               <div className="flex flex-col gap-6 py-4">
                 <div className="flex items-center gap-2">
-                  <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-xl shadow-sm ring-1 ${
-                      isDark ? 'bg-cyan-300 text-slate-950 ring-white/20' : 'bg-cyan-600 text-white ring-cyan-100'
-                    }`}
-                  >
+                  <div className="app-brand-mark">
                     <Droplets className="w-5 h-5" />
                   </div>
                   <div>
