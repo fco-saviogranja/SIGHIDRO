@@ -50,6 +50,8 @@
     --shadow-soft: 0 10px 26px rgba(20, 25, 34, 0.06);
     --sidebar-bg: #ffffff;
     --sidebar-border: #e0e0e0;
+    --hero-title-size: clamp(1.085rem, 1.295vw, 1.526rem);
+    --hero-title-size-mobile: 1.225rem;
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -448,7 +450,7 @@
   max-width: 720px;
   margin-top: 4px;
   font-family: var(--font-display);
-  font-size: clamp(1.55rem, 1.85vw, 2.18rem);
+  font-size: var(--hero-title-size);
   font-weight: 780;
   line-height: 1.08;
 }
@@ -1473,9 +1475,9 @@
   margin: 8px 0 12px;
   color: var(--ink);
   font-family: var(--font-display);
-  font-size: clamp(1.75rem, 2.55vw, 3rem);
+  font-size: var(--hero-title-size);
   font-weight: 780;
-  line-height: 1.04;
+  line-height: 1.08;
 }
 
 .page-hero p {
@@ -2262,7 +2264,7 @@
 
   .hero-strip h1,
   .page-hero h1 {
-    font-size: 1.75rem;
+    font-size: var(--hero-title-size-mobile);
     line-height: 1.08;
   }
 
@@ -3178,16 +3180,16 @@
 
 .app-shell.dark .hero-strip h1 {
   max-width: 680px;
-  font-size: clamp(1.55rem, 1.75vw, 2.12rem);
+  font-size: var(--hero-title-size);
   font-weight: 760;
   line-height: 1.1;
 }
 
 .app-shell.dark .page-hero h1 {
   max-width: 780px;
-  font-size: clamp(1.65rem, 2.35vw, 2.75rem);
+  font-size: var(--hero-title-size);
   font-weight: 760;
-  line-height: 1.06;
+  line-height: 1.1;
 }
 
 .app-shell.dark .page-hero p,
@@ -3480,8 +3482,9 @@
     padding: 18px;
   }
 
-  .app-shell.dark .hero-strip h1 {
-    font-size: 1.65rem;
+  .app-shell.dark .hero-strip h1,
+  .app-shell.dark .page-hero h1 {
+    font-size: var(--hero-title-size-mobile);
     line-height: 1.08;
   }
 
