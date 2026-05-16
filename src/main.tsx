@@ -6,7 +6,6 @@ import { AuthProvider } from './AuthContext';
 import { ThemeProvider } from './ThemeContext';
 import 'leaflet/dist/leaflet.css';
 import './index.css';
-import './sync.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

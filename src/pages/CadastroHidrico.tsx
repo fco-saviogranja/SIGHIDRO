@@ -145,8 +145,9 @@ function CadastroHidrico() {
         <div>
           <span className="eyebrow">Cadastro Hídrico</span>
           <h1>Base institucional de ativos e localidades</h1>
-          <p>Cadastro com persistência local e sincronização via API quando autenticado.</p>
-          <p className="sync-info">
+        </div>
+        <div className="page-hero-actions">
+          <div className="sync-info">
             {backend === 'api' ? (
               <>
                 <strong>
@@ -159,12 +160,12 @@ function CadastroHidrico() {
             ) : (
               <em>Modo local</em>
             )}
-          </p>
+          </div>
+          <button className="secondary-action" type="button" onClick={resetRegistry}>
+            <RotateCcw size={18} />
+            Restaurar dados iniciais
+          </button>
         </div>
-        <button className="secondary-action" type="button" onClick={resetRegistry}>
-          <RotateCcw size={18} />
-          Restaurar dados iniciais
-        </button>
       </section>
 
       <section className="summary-strip" aria-label="Resumo do cadastro">

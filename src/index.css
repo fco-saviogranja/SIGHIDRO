@@ -1470,6 +1470,14 @@
   padding: clamp(28px, 4vw, 46px);
 }
 
+.page-hero-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .page-hero h1 {
   max-width: 860px;
   margin: 8px 0 12px;
@@ -1486,6 +1494,38 @@
   color: var(--legacy-muted);
   font-weight: 600;
   line-height: 1.5;
+}
+
+.sync-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  margin: 0;
+  padding-left: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--navy);
+  font-size: 0.82rem;
+  font-weight: 750;
+  background: #ffffff;
+}
+
+.sync-info strong,
+.sync-info em {
+  font-size: inherit;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.sync-info .sync-action {
+  min-height: 42px;
+  margin-left: 2px;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 0;
 }
 
 .summary-strip {
@@ -2205,6 +2245,11 @@
   }
 
   .hero-actions {
+    justify-content: flex-start;
+  }
+
+  .page-hero-actions {
+    width: 100%;
     justify-content: flex-start;
   }
 
@@ -3212,6 +3257,7 @@
 }
 
 .app-shell.dark .hero-actions span,
+.app-shell.dark .sync-info,
 .app-shell.dark .kpi-trend,
 .app-shell.dark .filter-chip,
 .app-shell.dark .module-items span,
@@ -3228,6 +3274,7 @@
 }
 
 .app-shell.dark .hero-actions span,
+.app-shell.dark .sync-info,
 .app-shell.dark .kpi-trend {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
