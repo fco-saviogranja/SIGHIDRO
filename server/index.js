@@ -184,6 +184,10 @@ app.get('/api/health', (_req, res) => {
     status: 'ok',
     database: useInMemoryDb ? 'memory' : 'postgres',
     mode: process.env.NODE_ENV || 'development',
+    admin: {
+      email: normalizeEmail(process.env.ADMIN_EMAIL) || null,
+      configured: Boolean(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD),
+    },
   });
 });
 
