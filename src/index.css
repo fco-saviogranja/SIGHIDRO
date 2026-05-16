@@ -419,12 +419,12 @@
 }
 
 .hero-strip h1 {
-  max-width: 780px;
+  max-width: 720px;
   margin-top: 4px;
   font-family: var(--font-display);
-  font-size: clamp(1.75rem, 2.4vw, 2.65rem);
-  font-weight: 800;
-  line-height: 1.05;
+  font-size: clamp(1.55rem, 1.85vw, 2.18rem);
+  font-weight: 780;
+  line-height: 1.08;
 }
 
 .hero-actions {
@@ -1431,9 +1431,9 @@
   margin: 8px 0 12px;
   color: var(--ink);
   font-family: var(--font-display);
-  font-size: clamp(2rem, 3.6vw, 4.35rem);
-  font-weight: 800;
-  line-height: 0.98;
+  font-size: clamp(1.75rem, 2.55vw, 3rem);
+  font-weight: 780;
+  line-height: 1.04;
 }
 
 .page-hero p {
@@ -2209,8 +2209,8 @@
 
   .hero-strip h1,
   .page-hero h1 {
-    font-size: 2.25rem;
-    line-height: 1;
+    font-size: 1.75rem;
+    line-height: 1.08;
   }
 
   .metrics-grid,
@@ -3073,8 +3073,8 @@
 
 .app-shell.dark .hero-strip {
   overflow: hidden;
-  min-height: 132px;
-  border-radius: 24px;
+  min-height: 116px;
+  border-radius: 20px;
   background:
     radial-gradient(circle at 7% 0%, rgba(34, 211, 238, 0.22), transparent 32%),
     radial-gradient(circle at 86% 48%, rgba(16, 185, 129, 0.14), transparent 36%),
@@ -3118,6 +3118,20 @@
 .app-shell.dark .chart-summary strong,
 .app-shell.dark .repair-time strong {
   color: #f8fafc;
+}
+
+.app-shell.dark .hero-strip h1 {
+  max-width: 680px;
+  font-size: clamp(1.55rem, 1.75vw, 2.12rem);
+  font-weight: 760;
+  line-height: 1.1;
+}
+
+.app-shell.dark .page-hero h1 {
+  max-width: 780px;
+  font-size: clamp(1.65rem, 2.35vw, 2.75rem);
+  font-weight: 760;
+  line-height: 1.06;
 }
 
 .app-shell.dark .page-hero p,
@@ -3410,8 +3424,8 @@
   }
 
   .app-shell.dark .hero-strip h1 {
-    font-size: 1.9rem;
-    line-height: 1.05;
+    font-size: 1.65rem;
+    line-height: 1.08;
   }
 
   .app-shell.dark .hero-actions span {

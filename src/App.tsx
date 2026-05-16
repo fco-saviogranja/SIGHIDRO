@@ -109,14 +109,14 @@ function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#07111f]/82 backdrop-blur supports-[backdrop-filter]:bg-[#07111f]/68">
-      <div className="container flex h-14 max-w-screen-2xl items-center gap-6 px-4 md:px-8">
-        <NavLink className="flex items-center gap-2 mr-4" to="/dashboard" aria-label="Ir para o dashboard">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-300 to-emerald-300 text-slate-950 shadow-sm ring-1 ring-white/20">
+      <div className="container flex h-16 max-w-screen-2xl items-center gap-7 px-4 md:px-8">
+        <NavLink className="flex min-w-[150px] items-center gap-3 mr-3" to="/dashboard" aria-label="Ir para o dashboard">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-300 to-emerald-300 text-slate-950 shadow-sm ring-1 ring-white/20">
             <Droplets className="w-5 h-5" />
           </div>
           <div className="hidden md:flex flex-col">
-            <span className="text-sm font-bold leading-none tracking-tight text-slate-50">SIGHIDRO</span>
-            <span className="text-[10px] uppercase font-semibold leading-none tracking-wider text-cyan-100/70">ERP Hídrico</span>
+            <span className="text-base font-bold leading-none tracking-tight text-slate-50">SIGHIDRO</span>
+            <span className="mt-1 text-[11px] uppercase font-semibold leading-none tracking-normal text-cyan-100/70">ERP Hídrico</span>
           </div>
         </NavLink>
 
@@ -170,11 +170,12 @@ function Header() {
             <SheetContent side="right" className="w-[300px] sm:w-[400px] border-white/10 bg-[#07111f] text-slate-100">
               <div className="flex flex-col gap-6 py-4">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-300 text-slate-950 shadow-sm ring-1 ring-white/20">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-300 text-slate-950 shadow-sm ring-1 ring-white/20">
                     <Droplets className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="block text-sm font-bold leading-none">SIGHIDRO</span>
+                    <span className="block text-base font-bold leading-none">SIGHIDRO</span>
+                    <span className="mt-1 block text-[11px] uppercase font-semibold leading-none text-cyan-100/70">ERP Hídrico</span>
                   </div>
                 </div>
                 {renderNav('flex flex-col gap-2')}
