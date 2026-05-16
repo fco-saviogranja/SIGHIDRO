@@ -1,7 +1,25 @@
 import { FormEvent, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { Droplets, ShieldCheck } from 'lucide-react';
+import { Activity, ArrowRight, Database, Droplets, LockKeyhole, ShieldCheck, Signal } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../AuthContext';
+
+const proofItems = [
+  { label: 'Cadastro hídrico', icon: Database },
+  { label: 'Monitoramento', icon: Activity },
+  { label: 'Auditoria', icon: ShieldCheck },
+];
+
+const accessSignals = [
+  { label: 'Sincronização', value: 'API' },
+  { label: 'Perfil', value: 'Admin' },
+  { label: 'Sessão', value: 'Local' },
+];
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0 },
+};
 
 function LoginPage() {
   const { isAuthenticated, login, register, isBusy } = useAuth();
@@ -40,7 +58,13 @@ function LoginPage() {
   return (
     <main className="auth-page">
       <section className="auth-layout">
-        <div className="auth-intro">
+        <motion.div
+          className="auth-intro"
+          initial="hidden"
+          animate="show"
+          variants={fadeUp}
+          transition={{ duration: 0.36, ease: 'easeOut' }}
+        >
           <div className="auth-brand">
             <span className="brand-mark">
               <Droplets size={28} />
@@ -50,26 +74,63 @@ function LoginPage() {
               <small>SAAE de Jardim</small>
             </div>
           </div>
-          <h1>Gestão hídrica municipal com controle operacional.</h1>
-          <p>
-            Acesse o ambiente institucional para acompanhar ativos, alertas, manutenção e
-            relatórios do abastecimento público.
-          </p>
-          <div className="auth-proof">
-            <span>Cadastro hídrico</span>
-            <span>Monitoramento</span>
-            <span>Auditoria</span>
-          </div>
-        </div>
 
-        <form className="panel auth-card" onSubmit={handleSubmit}>
+          <div className="auth-intro-copy">
+            <span className="auth-eyebrow">Acesso seguro ao centro operacional</span>
+            <h1>Gestão hídrica municipal com controle operacional.</h1>
+            <p>
+              Entre no ambiente institucional para acompanhar ativos, alertas, manutenção e
+              relatórios do abastecimento público.
+            </p>
+          </div>
+
+          <div className="auth-console" aria-hidden="true">
+            <div className="auth-console-header">
+              <span />
+              <strong>Sessão protegida</strong>
+            </div>
+            <div className="auth-console-grid">
+              {accessSignals.map((item) => (
+                <article key={item.label}>
+                  <strong>{item.value}</strong>
+                  <span>{item.label}</span>
+                </article>
+              ))}
+            </div>
+            <div className="auth-console-status">
+              <Signal size={16} />
+              Canal operacional estável
+            </div>
+          </div>
+
+          <div className="auth-proof">
+            {proofItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <span key={item.label}>
+                  <Icon size={15} />
+                  {item.label}
+                </span>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        <motion.form
+          className="panel auth-card"
+          onSubmit={handleSubmit}
+          initial="hidden"
+          animate="show"
+          variants={fadeUp}
+          transition={{ duration: 0.36, delay: 0.06, ease: 'easeOut' }}
+        >
           <div className="form-heading">
             <span className="module-icon">
-              <ShieldCheck size={22} />
+              <LockKeyhole size={22} />
             </span>
             <div>
               <h2>{mode === 'login' ? 'Acesso institucional' : 'Criar conta'}</h2>
-              <p>Gerencie o cadastro hídrico com dados sincronizados via API.</p>
+              <p>Autentique sua sessão para acessar o painel operacional do SIGHIDRO.</p>
             </div>
           </div>
 
@@ -102,6 +163,7 @@ function LoginPage() {
           <div className="auth-actions">
             <button className="primary-action" type="submit" disabled={isBusy}>
               {isBusy ? 'Processando...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
+              {!isBusy ? <ArrowRight size={17} /> : null}
             </button>
             <button className="auth-toggle" type="button" onClick={toggleMode}>
               {mode === 'login' ? 'Criar conta' : 'Voltar para login'}
@@ -111,7 +173,7 @@ function LoginPage() {
           <p className="auth-note">
             O token de acesso fica salvo localmente para sincronizar o cadastro com o Render.
           </p>
-        </form>
+        </motion.form>
       </section>
     </main>
   );
