@@ -16,14 +16,25 @@ dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT) || 4000;
-const jwtSecret = process.env.JWT_SECRET;
+const host = process.env.HOST || '0.0.0.0';
+const isProduction = process.env.NODE_ENV === 'production';
+const allowInMemoryDb =
+  process.env.ALLOW_IN_MEMORY_DB === 'true' ||
+  (!isProduction && process.env.ALLOW_IN_MEMORY_DB !== 'false');
+const databaseUrl = process.env.DATABASE_URL?.trim();
+const jwtSecret = process.env.JWT_SECRET?.trim() || (isProduction ? '' : 'dev-only-sighidro-secret');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost')
-    ? { rejectUnauthorized: false }
-    : false,
-});
+if (!process.env.JWT_SECRET?.trim() && !isProduction) {
+  console.warn('JWT_SECRET not configured; using a development-only fallback secret.');
+}
+
+const isLocalDatabase = databaseUrl && /localhost|127\.0\.0\.1|::1/.test(databaseUrl);
+const pool = databaseUrl
+  ? new Pool({
+      connectionString: databaseUrl,
+      ssl: !isLocalDatabase ? { rejectUnauthorized: false } : false,
+    })
+  : null;
 
 // If database is unavailable we can fall back to a simple in-memory store
 let useInMemoryDb = false;
@@ -60,6 +71,10 @@ const normalizeRegistryPayload = (payload) => {
 const normalizeEmail = (email) => String(email ?? '').trim().toLowerCase();
 
 const ensureSchema = async () => {
+  if (!pool) {
+    throw new Error('DATABASE_URL is not configured.');
+  }
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id text PRIMARY KEY,
@@ -165,7 +180,11 @@ const requireAuth = (req, res, next) => {
 };
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok' });
+  res.json({
+    status: 'ok',
+    database: useInMemoryDb ? 'memory' : 'postgres',
+    mode: process.env.NODE_ENV || 'development',
+  });
 });
 
 app.post('/api/auth/register', async (req, res) => {
@@ -302,12 +321,24 @@ app.put('/api/registry', requireAuth, async (req, res) => {
 
 const start = async () => {
   try {
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is not configured.');
+    }
+
     await ensureSchema();
     await ensureAdminUser();
-    app.listen(port, () => {
-      console.log(`SIGHIDRO API listening on ${port}`);
+    app.listen(port, host, () => {
+      console.log(`SIGHIDRO API listening on ${host}:${port}`);
     });
   } catch (error) {
+    if (!allowInMemoryDb) {
+      console.error(
+        'Startup error; in-memory fallback is disabled:',
+        error && error.message ? error.message : error,
+      );
+      throw error;
+    }
+
     console.warn('Startup error, falling back to in-memory DB:', error && error.message ? error.message : error);
     useInMemoryDb = true;
     try {
@@ -315,8 +346,8 @@ const start = async () => {
     } catch (err) {
       console.warn('Failed to seed admin user in-memory:', err && err.message ? err.message : err);
     }
-    app.listen(port, () => {
-      console.log(`SIGHIDRO API listening on ${port} (in-memory mode)`);
+    app.listen(port, host, () => {
+      console.log(`SIGHIDRO API listening on ${host}:${port} (in-memory mode)`);
     });
   }
 };

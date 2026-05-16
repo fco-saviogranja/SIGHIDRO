@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserEmail(resolvedEmail);
       setUserRole(resolvedRole);
     } catch (error) {
-      if (canUseDevAdminFallback(normalizedEmail, password)) {
+      if (!isApiBackendEnabled && canUseDevAdminFallback(normalizedEmail, password)) {
         const fallbackToken = persistDevAdminSession(normalizedEmail);
         setToken(fallbackToken);
         setUserEmail(normalizedEmail);
