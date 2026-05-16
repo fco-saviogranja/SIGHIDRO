@@ -700,10 +700,11 @@
 .form-grid input,
 .form-grid select,
 .form-grid textarea {
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
   min-height: 44px;
-  padding: 9px 2px;
+  padding: 9px 12px;
   border: 0;
   border-bottom: 1px solid var(--line);
   border-radius: 0;
@@ -724,6 +725,21 @@
 .form-grid textarea {
   resize: vertical;
   line-height: 1.5;
+}
+
+.filter-field select,
+.form-grid select {
+  padding-right: 34px;
+}
+
+.search-field input:-webkit-autofill,
+.filter-field input:-webkit-autofill,
+.form-grid input:-webkit-autofill {
+  -webkit-text-fill-color: var(--ink) !important;
+  caret-color: var(--ink);
+  -webkit-box-shadow: 0 0 0 1000px #f5f9fb inset !important;
+  box-shadow: 0 0 0 1000px #f5f9fb inset !important;
+  transition: background-color 9999s ease-out 0s;
 }
 
 .search-field input::placeholder,
@@ -1930,10 +1946,21 @@
 
 .auth-card .form-grid input {
   min-height: 48px;
-  padding: 9px 0;
+  padding: 10px 12px;
   border-bottom-color: rgba(148, 163, 184, 0.24);
   color: #f8fafc;
   background: transparent;
+}
+
+.auth-card .form-grid input:-webkit-autofill,
+.auth-card .form-grid input:-webkit-autofill:hover,
+.auth-card .form-grid input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f8fafc !important;
+  caret-color: #f8fafc;
+  -webkit-box-shadow: 0 0 0 1000px #07111f inset !important;
+  box-shadow: 0 0 0 1000px #07111f inset !important;
+  border-bottom-color: rgba(103, 232, 249, 0.38);
+  transition: background-color 9999s ease-out 0s;
 }
 
 .auth-card .form-grid input::placeholder {
