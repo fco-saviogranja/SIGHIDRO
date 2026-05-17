@@ -4,6 +4,9 @@ import animate from "tailwindcss-animate";
 const config = {
   darkMode: "class",
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
+  safelist: [
+    { pattern: /^(bg|text|border|ring|from|to|via|shadow|opacity|rounded)-/ },
+  ],
   theme: {
     extend: {
       colors: {
