@@ -1,53 +1,29 @@
-import {
-  Activity,
-  ArrowRight,
-  Database,
-  Droplets,
-  FileBarChart,
-  Gauge,
-  LockKeyhole,
-  Map,
-  ShieldCheck,
-  Signal,
-  Waves,
-} from 'lucide-react';
+import { Activity, ArrowRight, Droplets, FileBarChart, Gauge, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 
-const moduleHighlights = [
-  {
-    title: 'Cadastro hídrico',
-    description: 'Poços, bombas, reservatórios e localidades em uma base operacional única.',
-    icon: Database,
-  },
-  {
-    title: 'Mapa operacional',
-    description: 'Ativos distribuídos no território com status, rota e leitura geográfica.',
-    icon: Map,
-  },
+const heroFeatures = [
   {
     title: 'Monitoramento',
-    description: 'Leituras de vazão, nível, energia e status para decisão diária.',
+    description: 'Visão contínua da rede com alertas e leituras reais.',
     icon: Activity,
   },
   {
-    title: 'Relatórios',
-    description: 'Indicadores para auditoria, prestação de contas e gestão administrativa.',
+    title: 'Manutenção',
+    description: 'Gestão de ordens e agenda de intervenções no sistema.',
+    icon: Gauge,
+  },
+  {
+    title: 'Vazão e Nível',
+    description: 'Controle preciso das medições e evolução de reservatórios.',
+    icon: Droplets,
+  },
+  {
+    title: 'Inteligência',
+    description: 'Relatórios e indicadores para decisões administrativas.',
     icon: FileBarChart,
   },
-];
-
-const trustItems = [
-  { label: 'Acesso protegido', icon: LockKeyhole },
-  { label: 'Perfil administrador', icon: ShieldCheck },
-  { label: 'Operação municipal', icon: Gauge },
-];
-
-const platformSignals = [
-  { label: 'Ativos sincronizados', value: '100%' },
-  { label: 'Alertas críticos', value: '0' },
-  { label: 'Base operacional', value: 'Única' },
 ];
 
 const fadeUp = {
@@ -82,62 +58,64 @@ function LandingPage() {
           </span>
         </Link>
         <nav className="landing-nav" aria-label="Navegação pública">
-          <a href="#modulos">Módulos</a>
-          <a href="#operacao">Operação</a>
+          <a href="#features">Recursos</a>
+          <a href="#overview">Visão</a>
           <Link to={appHref}>{appLabel}</Link>
         </nav>
       </header>
 
       <section className="landing-hero">
-        <OperationalScene />
-        <motion.div
-          className="landing-hero-content"
-          initial="hidden"
-          animate="show"
-          variants={stagger}
-        >
-          <motion.span className="landing-eyebrow" variants={fadeUp}>
-            Centro de inteligência hídrica municipal
-          </motion.span>
-          <motion.h1 variants={fadeUp}>SIGHIDRO</motion.h1>
-          <motion.p variants={fadeUp}>
-            Plataforma institucional para cadastrar ativos, acompanhar a rede, priorizar manutenção
-            e consolidar indicadores críticos do abastecimento municipal.
+        <motion.div className="landing-hero-content" initial="hidden" animate="show" variants={stagger}>
+          <motion.div className="landing-logo-shell" variants={fadeUp}>
+            <div className="landing-logo" aria-hidden="true">
+              <Droplets size={52} />
+            </div>
+            <div className="landing-logo-label">
+              <strong>SIGHIDRO</strong>
+              <span>Sistema integrado de gestão hídrica</span>
+              <small>do SAAEJ de Jardim</small>
+            </div>
+          </motion.div>
+
+          <motion.p className="landing-hero-description" variants={fadeUp}>
+            Plataforma municipal para cadastrar ativos, acompanhar vazões e níveis, priorizar manutenção e
+            transformar dados em inteligência operacional.
           </motion.p>
+
           <motion.div className="landing-actions" variants={fadeUp}>
             <Link className="landing-primary" to={appHref}>
               {appLabel}
               <ArrowRight size={18} />
             </Link>
-            <a className="landing-secondary" href="#modulos">
-              Conhecer módulos
+            <a className="landing-secondary" href="#features">
+              Ver recursos
             </a>
           </motion.div>
-          <motion.div className="landing-trust" aria-label="Recursos institucionais" variants={fadeUp}>
-            {trustItems.map((item) => {
-              const Icon = item.icon;
+
+          <motion.div className="landing-feature-grid" variants={fadeUp}>
+            {heroFeatures.map((feature) => {
+              const Icon = feature.icon;
               return (
-                <span key={item.label}>
-                  <Icon size={16} />
-                  {item.label}
-                </span>
+                <article key={feature.title} className="landing-feature-card">
+                  <span>
+                    <Icon size={22} />
+                  </span>
+                  <h3>{feature.title}</h3>
+                  <p>{feature.description}</p>
+                </article>
               );
             })}
           </motion.div>
-          <motion.div className="landing-status-strip" aria-label="Sinais da plataforma" variants={fadeUp}>
-            {platformSignals.map((signal) => (
-              <article key={signal.label}>
-                <strong>{signal.value}</strong>
-                <span>{signal.label}</span>
-              </article>
-            ))}
-          </motion.div>
+
+          <motion.p className="landing-tagline" variants={fadeUp}>
+            Gestão inteligente. Água para todos.
+          </motion.p>
         </motion.div>
       </section>
 
       <motion.section
         className="landing-section landing-overview"
-        id="operacao"
+        id="overview"
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, amount: 0.28 }}
@@ -162,96 +140,7 @@ function LandingPage() {
           </article>
         </div>
       </motion.section>
-
-      <motion.section
-        className="landing-section"
-        id="modulos"
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.24 }}
-        variants={fadeUp}
-      >
-        <div className="landing-section-heading">
-          <span className="landing-eyebrow">Estrutura do sistema</span>
-          <h2>Módulos essenciais para uma rotina administrativa enxuta.</h2>
-        </div>
-        <div className="landing-modules">
-          {moduleHighlights.map((module) => {
-            const Icon = module.icon;
-            return (
-              <article key={module.title}>
-                <span>
-                  <Icon size={22} />
-                </span>
-                <h3>{module.title}</h3>
-                <p>{module.description}</p>
-              </article>
-            );
-          })}
-        </div>
-      </motion.section>
-
-      <motion.section
-        className="landing-section landing-cta"
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.35 }}
-        variants={fadeUp}
-      >
-        <div>
-          <span className="landing-eyebrow">Acesso administrativo</span>
-          <h2>Entre com o usuário oficial e comece a operar o SIGHIDRO.</h2>
-        </div>
-        <Link className="landing-primary" to={appHref}>
-          {appLabel}
-          <ArrowRight size={18} />
-        </Link>
-      </motion.section>
     </main>
-  );
-}
-
-function OperationalScene() {
-  return (
-    <div className="landing-scene" aria-hidden="true">
-      <div className="landing-scene-grid" />
-      <div className="landing-network network-a" />
-      <div className="landing-network network-b" />
-      <div className="landing-network network-c" />
-      <div className="landing-scanline" />
-      <span className="landing-node node-a" />
-      <span className="landing-node node-b" />
-      <span className="landing-node node-c" />
-      <span className="landing-node node-d" />
-      <div className="landing-watermark">
-        <Waves size={34} />
-        <span>Rede municipal</span>
-      </div>
-      <div className="landing-telemetry telemetry-a">
-        <small>Vazão cadastrada</small>
-        <strong>227 m³/h</strong>
-      </div>
-      <div className="landing-telemetry telemetry-b">
-        <small>Reservatório médio</small>
-        <strong>86%</strong>
-      </div>
-      <div className="landing-telemetry telemetry-c">
-        <small>Sinal da rede</small>
-        <strong>
-          <Signal size={17} />
-          Estável
-        </strong>
-      </div>
-      <div className="landing-route-card">
-        <span />
-        <div>
-          <small>Rota de campo</small>
-          <strong>7 ativos vistoriados</strong>
-        </div>
-      </div>
-      <div className="landing-map-label label-a">Brejinho</div>
-      <div className="landing-map-label label-b">Jardim Centro</div>
-    </div>
   );
 }
 
