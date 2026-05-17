@@ -1,4 +1,5 @@
 @import "./styles/theme.css";
+@import "./styles/legacy.css";
 
 @tailwind base;
 @tailwind components;
@@ -18,7 +19,6 @@
 
 }
 
-@import "./styles/legacy.css";
 .filter-chip {
   min-height: 34px;
   border: 1px solid var(--line);
@@ -1048,6 +1048,206 @@
   padding: 20px;
 }
 
+.page-metric-card > svg {
+  color: var(--blue);
+}
+
+.monitor-metrics-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.monitoring-tools {
+  grid-template-columns: minmax(280px, 1.2fr) repeat(3, minmax(150px, 0.7fr)) auto;
+  align-items: end;
+}
+
+.monitoring-clear-action {
+  align-self: end;
+}
+
+.monitoring-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.75fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.monitoring-map-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.monitoring-map-canvas {
+  min-height: 420px;
+}
+
+.monitoring-alert-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.monitoring-alert-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 72px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-align: left;
+  background: #fff;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.monitoring-alert-card:hover {
+  border-color: var(--line-strong);
+  background: #fbfbfc;
+  transform: translateY(-1px);
+}
+
+.monitoring-alert-card > span {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  background: var(--amber);
+}
+
+.monitoring-alert-critical {
+  border-left-color: var(--red);
+}
+
+.monitoring-alert-critical > span {
+  background: var(--red);
+}
+
+.monitoring-alert-card div,
+.monitoring-selected-card div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.monitoring-alert-card strong,
+.monitoring-selected-card strong,
+.monitoring-checklist strong {
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+.monitoring-alert-card small,
+.monitoring-selected-card small {
+  color: var(--legacy-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.monitoring-selected-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fbfcfd;
+}
+
+.monitoring-table-panel .asset-table {
+  min-width: 1080px;
+}
+
+.monitoring-table-panel .asset-row {
+  grid-template-columns: 0.72fr 1.22fr 0.76fr 0.92fr 0.72fr 0.62fr 1fr 0.72fr 0.76fr;
+}
+
+.monitoring-row {
+  border-left: 3px solid transparent;
+}
+
+.monitoring-row-critical {
+  border-left-color: rgba(143, 61, 61, 0.68);
+}
+
+.monitoring-row-warning {
+  border-left-color: rgba(184, 135, 36, 0.68);
+}
+
+.monitoring-row.selected {
+  background: rgba(25, 58, 89, 0.065);
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.monitoring-row-critical.selected {
+  box-shadow: inset 3px 0 0 var(--red);
+}
+
+.monitoring-row-warning.selected {
+  box-shadow: inset 3px 0 0 var(--amber);
+}
+
+.monitoring-severity {
+  display: inline-flex;
+  justify-content: center;
+  min-height: 28px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.monitoring-severity-critical {
+  color: var(--red);
+  background: rgba(143, 61, 61, 0.1);
+}
+
+.monitoring-severity-warning {
+  color: var(--amber);
+  background: rgba(184, 135, 36, 0.12);
+}
+
+.monitoring-severity-stable {
+  color: var(--green);
+  background: rgba(47, 104, 88, 0.11);
+}
+
+.monitoring-row-action {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 0.75rem;
+}
+
+.monitoring-checklist {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.monitoring-checklist article {
+  display: grid;
+  gap: 7px;
+  min-height: 78px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+
+.monitoring-checklist span {
+  color: var(--legacy-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
 .module-route-icon {
   display: grid;
   width: 68px;
@@ -1561,6 +1761,7 @@
   }
 
   .metrics-grid,
+  .monitor-metrics-grid,
   .modules-grid,
   .summary-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1579,6 +1780,7 @@
   }
 
   .registry-layout,
+  .monitoring-layout,
   .module-map-layout {
     grid-template-columns: 1fr;
   }
@@ -1638,6 +1840,8 @@
 
   .operations-grid,
   .analytics-grid,
+  .monitoring-alert-list,
+  .monitoring-checklist,
   .page-metrics-grid,
   .reports-grid {
     grid-template-columns: 1fr;
@@ -2732,6 +2936,7 @@
 }
 
 .app-shell.dark .panel-header > div,
+.app-shell.dark .page-metric-card > svg,
 .app-shell.dark .summary-card svg,
 .app-shell.dark .module-icon,
 .app-shell.dark .module-route-icon,
@@ -2794,12 +2999,50 @@
 
 .app-shell.dark .asset-row:hover,
 .app-shell.dark .registry-row:hover,
+.app-shell.dark .monitoring-row.selected,
 .app-shell.dark .registry-row-button.selected {
   background: rgba(14, 165, 233, 0.08);
 }
 
-.app-shell.dark .mini-table article strong {
+.app-shell.dark .mini-table article strong,
+.app-shell.dark .monitoring-alert-card strong,
+.app-shell.dark .monitoring-selected-card strong,
+.app-shell.dark .monitoring-checklist strong {
   color: #f8fafc;
+}
+
+.app-shell.dark .monitoring-alert-card,
+.app-shell.dark .monitoring-selected-card,
+.app-shell.dark .monitoring-checklist article {
+  border-color: rgba(148, 163, 184, 0.18);
+  color: #e5eef7;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.app-shell.dark .monitoring-alert-card:hover {
+  border-color: rgba(103, 232, 249, 0.34);
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.app-shell.dark .monitoring-alert-card small,
+.app-shell.dark .monitoring-selected-card small,
+.app-shell.dark .monitoring-checklist span {
+  color: #94a3b8;
+}
+
+.app-shell.dark .monitoring-severity-critical {
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.26);
+}
+
+.app-shell.dark .monitoring-severity-warning {
+  color: #fde68a;
+  background: rgba(120, 53, 15, 0.28);
+}
+
+.app-shell.dark .monitoring-severity-stable {
+  color: #bbf7d0;
+  background: rgba(20, 83, 45, 0.28);
 }
 
 .app-shell.dark .maintenance-mini-table button {
@@ -2946,5 +3189,3 @@
     padding-inline: 11px;
   }
 }
-
-
