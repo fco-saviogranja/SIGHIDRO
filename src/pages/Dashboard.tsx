@@ -10,7 +10,7 @@ import {
   Waves,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { lazy, Suspense, useMemo } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useHydroRegistry } from '../HydroRegistryContext';
 import { flowSeries, productionSeries } from '../data';
@@ -34,7 +34,7 @@ function MapFallback() {
 }
 
 function Dashboard() {
-  const { allRecords, registry, syncStatus, retrySync, backend } = useHydroRegistry();
+  const { allRecords, registry, syncStatus, retrySync, backend, exportAssetsCsv } = useHydroRegistry();
   const indicators = useMemo(() => makeIndicators(registry), [registry]);
   const dashboardAlerts = useMemo(() => makeAlerts(allRecords), [allRecords]);
   const maintenanceRows = useMemo(() => makeMaintenances(allRecords), [allRecords]);
@@ -46,6 +46,28 @@ function Dashboard() {
     () => productionSeries.map((point) => ({ month: point.label, Producao: point.value })),
     [],
   );
+  const exportDashboardCsv = async () => {
+    const csv = await exportAssetsCsv();
+    downloadTextFile(csv, 'sighidro-ativos.csv', 'text/csv;charset=utf-8');
+  };
+
+  const exportDashboardSheet = () => {
+    const headers = ['Codigo', 'Ativo', 'Categoria', 'Localidade', 'Status', 'Responsavel', 'Vazao', 'Nivel', 'Energia', 'Ultima medicao'];
+    const rows = allRecords.map((record) => [
+      record.code,
+      record.name,
+      categoryMeta[record.category].label,
+      record.location,
+      statusLabel[record.status],
+      record.responsible,
+      record.flowRate ?? '',
+      resolveLevelOrCapacity(record),
+      record.energyType ?? '',
+      record.lastReading,
+    ]);
+    const tsv = [headers, ...rows].map((row) => row.map((value) => String(value).replace(/\t/g, ' ')).join('\t')).join('\n');
+    downloadTextFile(tsv, 'sighidro-planilha-ativos.tsv', 'text/tab-separated-values;charset=utf-8');
+  };
 
   return (
     <motion.main
@@ -137,10 +159,22 @@ function Dashboard() {
       </section>
 
       <AdvancedFilters />
-      <AssetTable records={allRecords} />
+      <AssetTable records={allRecords} onExportCsv={exportDashboardCsv} onExportSheet={exportDashboardSheet} />
     </motion.main>
   );
 }
+
+const downloadTextFile = (content: string, filename: string, type: string) => {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
 
 function makeIndicators(registry: ReturnType<typeof useHydroRegistry>['registry']): Indicator[] {
   const wells = registry.poço;
@@ -245,7 +279,7 @@ function KpiCard({ indicator }: { indicator: Indicator }) {
 function OperationalMap({ records }: { records: HydroRecord[] }) {
   return (
     <section className="panel map-panel" id="mapa">
-      <PanelHeader title="Mapa operacional" icon={<Map size={19} />} />
+      <PanelHeader title="Mapa operacional" icon={<Map size={19} />} actionTo="/mapa" actionLabel="Abrir mapa operacional" />
       <div className="map-canvas real-map-shell" aria-label="Mapa operacional com ativos georreferenciados">
         <Suspense fallback={<MapFallback />}>
           <OperationalLeafletMap records={records} />
@@ -276,7 +310,7 @@ function OperationalMap({ records }: { records: HydroRecord[] }) {
 function AlertPanel({ alerts }: { alerts: Alert[] }) {
   return (
     <section className="panel alert-panel">
-      <PanelHeader title="Alertas críticos" icon={<AlertTriangle size={19} />} />
+      <PanelHeader title="Alertas críticos" icon={<AlertTriangle size={19} />} actionTo="/monitoramento" actionLabel="Abrir monitoramento" />
       <div className="alert-list">
         {alerts.length ? alerts.map((alert) => <AlertRow key={alert.id} alert={alert} />) : <EmptyState text="Sem alertas críticos no cadastro atual." />}
       </div>
@@ -307,7 +341,7 @@ function FlowChart({ data }: { data: Array<{ day: string; Vazao: number }> }) {
 
   return (
     <section className="panel chart-panel">
-      <PanelHeader title="Vazão hídrica diária" icon={<Waves size={19} />} />
+      <PanelHeader title="Vazão hídrica diária" icon={<Waves size={19} />} actionTo="/monitoramento" actionLabel="Abrir monitoramento de vazão" />
       <AreaSparkline points={points} />
       <div className="chart-summary">
         <strong>{flowValueFormatter(data.at(-1)?.Vazao ?? 0)}</strong>
@@ -322,7 +356,7 @@ function ProductionChart({ data }: { data: Array<{ month: string; Producao: numb
 
   return (
     <section className="panel chart-panel">
-      <PanelHeader title="Produção total mensal" icon={<CircleGauge size={19} />} />
+      <PanelHeader title="Produção total mensal" icon={<CircleGauge size={19} />} actionTo="/relatorios" actionLabel="Abrir relatórios" />
       <BarVisualization points={points} />
       <div className="chart-summary">
         <strong>{productionValueFormatter(data.at(-1)?.Producao ?? 0)}</strong>
@@ -381,7 +415,7 @@ function BarVisualization({ points }: { points: ChartPoint[] }) {
 function MaintenancePanel({ rows }: { rows: Maintenance[] }) {
   return (
     <section className="panel maintenance-panel">
-      <PanelHeader title="Manutenção" icon={<Gauge size={19} />} />
+      <PanelHeader title="Manutenção" icon={<Gauge size={19} />} actionTo="/manutencao" actionLabel="Abrir manutenção" />
       <div className="maintenance-list">
         {rows.length ? rows.map((maintenance) => <MaintenanceRow key={maintenance.id} maintenance={maintenance} />) : <EmptyState text="Sem manutenção pendente." />}
       </div>
@@ -407,6 +441,52 @@ function MaintenanceRow({ maintenance }: { maintenance: Maintenance }) {
 }
 
 function AdvancedFilters() {
+  const [feedback, setFeedback] = useState('');
+  const [filters, setFilters] = useState({
+    asset: '',
+    type: 'all',
+    location: '',
+    responsible: 'all',
+    period: 'week',
+    minimumLevel: '',
+  });
+  const [activeStatuses, setActiveStatuses] = useState(['operando']);
+
+  const updateFilter = (field: keyof typeof filters, value: string) => {
+    setFilters((current) => ({ ...current, [field]: value }));
+    setFeedback('');
+  };
+
+  const toggleStatus = (status: string) => {
+    setActiveStatuses((current) =>
+      current.includes(status) ? current.filter((item) => item !== status) : [...current, status],
+    );
+    setFeedback('');
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      asset: '',
+      type: 'all',
+      location: '',
+      responsible: 'all',
+      period: 'week',
+      minimumLevel: '',
+    });
+    setActiveStatuses(['operando']);
+    setFeedback('Filtros limpos.');
+  };
+
+  const saveView = () => {
+    window.localStorage.setItem('sighidro:dashboard-view', JSON.stringify({ ...filters, statuses: activeStatuses }));
+    setFeedback('Visão salva neste navegador.');
+  };
+
+  const applyFilters = () => {
+    window.localStorage.setItem('sighidro:dashboard-active-filters', JSON.stringify({ ...filters, statuses: activeStatuses }));
+    setFeedback('Filtros aplicados para a sessão atual.');
+  };
+
   return (
     <section className="panel filters-panel" aria-label="Filtros avançados do dashboard">
       <div className="filters-header">
@@ -415,26 +495,27 @@ function AdvancedFilters() {
           <h2>Refino operacional</h2>
         </div>
         <div className="filters-actions">
-          <button className="ghost-action" type="button">
+          <button className="ghost-action" type="button" onClick={clearFilters}>
             Limpar
           </button>
-          <button className="secondary-small" type="button">
+          <button className="secondary-small" type="button" onClick={saveView}>
             Salvar visão
           </button>
-          <button className="action-small" type="button">
+          <button className="action-small" type="button" onClick={applyFilters}>
             Aplicar filtros
           </button>
         </div>
       </div>
+      {feedback ? <div className="inline-feedback">{feedback}</div> : null}
 
       <div className="filters-grid">
         <label className="filter-field">
           <span>Ativo / código</span>
-          <input placeholder="POC-001, BMB-012..." />
+          <input value={filters.asset} onChange={(event) => updateFilter('asset', event.target.value)} placeholder="POC-001, BMB-012..." />
         </label>
         <label className="filter-field">
           <span>Tipo</span>
-          <select defaultValue="all">
+          <select value={filters.type} onChange={(event) => updateFilter('type', event.target.value)}>
             <option value="all">Todos</option>
             <option value="poço">Poços</option>
             <option value="bomba">Bombas</option>
@@ -444,11 +525,11 @@ function AdvancedFilters() {
         </label>
         <label className="filter-field">
           <span>Localidade</span>
-          <input placeholder="Zona 1, Brejinho..." />
+          <input value={filters.location} onChange={(event) => updateFilter('location', event.target.value)} placeholder="Zona 1, Brejinho..." />
         </label>
         <label className="filter-field">
           <span>Responsável</span>
-          <select defaultValue="all">
+          <select value={filters.responsible} onChange={(event) => updateFilter('responsible', event.target.value)}>
             <option value="all">Todos</option>
             <option value="operador">Operador Hidráulico</option>
             <option value="tecnico">Técnico de Campo</option>
@@ -458,7 +539,7 @@ function AdvancedFilters() {
         </label>
         <label className="filter-field">
           <span>Período</span>
-          <select defaultValue="week">
+          <select value={filters.period} onChange={(event) => updateFilter('period', event.target.value)}>
             <option value="today">Hoje</option>
             <option value="week">Últimos 7 dias</option>
             <option value="month">Últimos 30 dias</option>
@@ -466,42 +547,53 @@ function AdvancedFilters() {
         </label>
         <label className="filter-field">
           <span>Nível mínimo</span>
-          <input placeholder="% ou m³" />
+          <input value={filters.minimumLevel} onChange={(event) => updateFilter('minimumLevel', event.target.value)} placeholder="% ou m³" />
         </label>
       </div>
 
       <div className="filters-chips" aria-label="Filtros por status">
-        <button className="filter-chip active" type="button">
-          Operando
-        </button>
-        <button className="filter-chip" type="button">
-          Atenção
-        </button>
-        <button className="filter-chip" type="button">
-          Parado
-        </button>
-        <button className="filter-chip" type="button">
-          Manutenção
-        </button>
+        {[
+          ['operando', 'Operando'],
+          ['atenção', 'Atenção'],
+          ['parado', 'Parado'],
+          ['manutenção', 'Manutenção'],
+        ].map(([value, label]) => (
+          <button
+            className={activeStatuses.includes(value) ? 'filter-chip active' : 'filter-chip'}
+            key={value}
+            type="button"
+            onClick={() => toggleStatus(value)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
     </section>
   );
 }
 
-function AssetTable({ records }: { records: HydroRecord[] }) {
+function AssetTable({
+  onExportCsv,
+  onExportSheet,
+  records,
+}: {
+  onExportCsv: () => void;
+  onExportSheet: () => void;
+  records: HydroRecord[];
+}) {
   return (
     <section className="panel table-panel">
-      <PanelHeader title="Visão geral dos ativos" icon={<Droplets size={19} />} />
+      <PanelHeader title="Visão geral dos ativos" icon={<Droplets size={19} />} actionTo="/cadastro" actionLabel="Abrir cadastro hídrico" />
       <div className="table-toolbar">
         <div>
           <strong>{records.length} ativos monitorados</strong>
           <span>Atualizado agora pelo centro de controle</span>
         </div>
         <div className="table-actions">
-          <button className="ghost-action" type="button">
+          <button className="ghost-action" type="button" onClick={onExportCsv}>
             Exportar
           </button>
-          <button className="ghost-action" type="button">
+          <button className="ghost-action" type="button" onClick={onExportSheet}>
             Planilha
           </button>
         </div>

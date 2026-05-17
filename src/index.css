@@ -294,6 +294,7 @@
 .icon-button,
 .menu-button,
 .panel-header button,
+.panel-header-action,
 .metric-card button {
   display: inline-grid;
   place-items: center;
@@ -316,6 +317,7 @@
 .icon-button:hover,
 .menu-button:hover,
 .panel-header button:hover,
+.panel-header-action:hover,
 .row-actions button:hover {
   border-color: var(--line-strong);
   color: var(--ink);
@@ -845,6 +847,68 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: #ffffff;
+}
+
+.panel-header-action {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: #4d5560;
+  background: #ffffff;
+  text-decoration: none;
+}
+
+.inline-feedback {
+  min-height: 38px;
+  padding: 10px 12px;
+  border: 1px solid rgba(25, 58, 89, 0.18);
+  border-radius: var(--radius-sm);
+  color: var(--blue);
+  font-size: 0.82rem;
+  font-weight: 800;
+  background: rgba(25, 58, 89, 0.06);
+}
+
+.sighidro-dialog {
+  border-radius: 8px;
+}
+
+.dialog-list {
+  display: grid;
+  gap: 10px;
+}
+
+.dialog-list article {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-soft);
+}
+
+.dialog-list strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.dialog-list span {
+  color: var(--legacy-muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dialog-action {
+  width: 100%;
 }
 
 .map-canvas {
@@ -3435,6 +3499,7 @@
 .app-shell.dark .secondary-small,
 .app-shell.dark .ghost-action,
 .app-shell.dark .panel-header button,
+.app-shell.dark .panel-header-action,
 .app-shell.dark .row-actions button,
 .app-shell.dark .module-icon,
 .app-shell.dark .module-route-icon {
@@ -3467,6 +3532,7 @@
 .app-shell.dark .secondary-small:hover,
 .app-shell.dark .ghost-action:hover,
 .app-shell.dark .panel-header button:hover,
+.app-shell.dark .panel-header-action:hover,
 .app-shell.dark .row-actions button:hover,
 .app-shell.dark .filter-chip:hover,
 .app-shell.dark .filter-chip.active {
@@ -3587,6 +3653,21 @@
   border-color: rgba(148, 163, 184, 0.18);
   color: #a7f3d0;
   background: rgba(15, 23, 42, 0.72);
+}
+
+.app-shell.dark .inline-feedback,
+.app-shell.dark .dialog-list article {
+  border-color: rgba(148, 163, 184, 0.18);
+  color: #dbeafe;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.app-shell.dark .dialog-list strong {
+  color: #f8fafc;
+}
+
+.app-shell.dark .dialog-list span {
+  color: #94a3b8;
 }
 
 .app-shell.dark .empty-state {

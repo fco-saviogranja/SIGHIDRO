@@ -7,6 +7,7 @@ import { useTheme } from './ThemeContext';
 import { navItems, userContext } from './metadata';
 
 import { Avatar, AvatarFallback } from './components/ui/avatar';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { Button } from './components/ui/button';
@@ -78,6 +79,7 @@ function AppShell() {
 }
 
 function Header() {
+  const [activeDialog, setActiveDialog] = useState<'notifications' | 'settings' | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { isAuthenticated, userEmail, userRole, logout } = useAuth();
   const { isDark, theme, toggleTheme } = useTheme();
@@ -125,116 +127,175 @@ function Header() {
   );
 
   return (
-    <header
-      className={`sticky top-0 z-40 w-full border-b backdrop-blur transition-colors ${
-        isDark
-          ? 'border-white/10 bg-[#07111f]/80 supports-[backdrop-filter]:bg-[#07111f]/70'
-          : 'border-slate-200/80 bg-white/90 shadow-sm supports-[backdrop-filter]:bg-white/80'
-      }`}
-    >
-      <div className="container flex h-16 max-w-screen-2xl items-center gap-7 px-4 md:px-8">
-        <NavLink className="flex min-w-[150px] items-center gap-3 mr-3" to="/dashboard" aria-label="Ir para o dashboard">
-          <div className="app-brand-mark">
-            <Droplets className="w-5 h-5" />
+    <>
+      <header
+        className={`sticky top-0 z-40 w-full border-b backdrop-blur transition-colors ${
+          isDark
+            ? 'border-white/10 bg-[#07111f]/80 supports-[backdrop-filter]:bg-[#07111f]/70'
+            : 'border-slate-200/80 bg-white/90 shadow-sm supports-[backdrop-filter]:bg-white/80'
+        }`}
+      >
+        <div className="container flex h-16 max-w-screen-2xl items-center gap-7 px-4 md:px-8">
+          <NavLink className="flex min-w-[150px] items-center gap-3 mr-3" to="/dashboard" aria-label="Ir para o dashboard">
+            <div className="app-brand-mark">
+              <Droplets className="w-5 h-5" />
+            </div>
+            <div className="hidden md:flex flex-col">
+              <span className={`text-base font-bold leading-none tracking-tight ${brandTextClass}`}>SIGHIDRO</span>
+              <span className={`mt-1 text-[11px] uppercase font-semibold leading-none tracking-normal ${brandSubtextClass}`}>ERP Hídrico</span>
+            </div>
+          </NavLink>
+
+          <div className="hidden lg:flex" >
+            {renderNav('flex items-center gap-1')}
           </div>
-          <div className="hidden md:flex flex-col">
-            <span className={`text-base font-bold leading-none tracking-tight ${brandTextClass}`}>SIGHIDRO</span>
-            <span className={`mt-1 text-[11px] uppercase font-semibold leading-none tracking-normal ${brandSubtextClass}`}>ERP Hídrico</span>
-          </div>
-        </NavLink>
 
-        <div className="hidden lg:flex" >
-          {renderNav('flex items-center gap-1')}
-        </div>
-
-        <div className="flex flex-1 items-center justify-end gap-2">
-          
-          <Button variant="ghost" size="icon" className={iconButtonClass}>
-             <Bell className="w-4 h-4" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className={iconButtonClass}
-            type="button"
-            onClick={toggleTheme}
-            aria-label={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
-            aria-pressed={isDark}
-            title={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
-          >
-             <ThemeIcon className="w-4 h-4" />
-          </Button>
-
-          {isAuthenticated ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant="ghost" className={`relative h-8 w-8 rounded-full ${isDark ? 'hover:bg-white/10' : 'hover:bg-slate-100'}`} />}>
-                  <Avatar className={`h-8 w-8 border shadow-sm ${isDark ? 'border-white/15' : 'border-slate-200'}`}>
-                    <AvatarFallback className={`${isDark ? 'bg-white/10 text-slate-50' : 'bg-cyan-50 text-cyan-950'} font-semibold`}>{displayName.substring(0,2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end">
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{displayName}</p>
-                    <p className="text-xs leading-none text-muted-foreground">{roleLabel}</p>
-                    <p className="text-xs leading-none text-muted-foreground">{userEmail}</p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Configurações</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={logout}
-                  className={isDark ? 'text-red-300 focus:bg-red-950/45 focus:text-red-200' : 'text-red-600 focus:bg-red-50 focus:text-red-700'}
-                >
-                  Sair
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button nativeButton={false} render={<NavLink to="/login" />} variant="default" size="sm">
-              Entrar
+          <div className="flex flex-1 items-center justify-end gap-2">
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              className={iconButtonClass}
+              type="button"
+              onClick={() => setActiveDialog('notifications')}
+              aria-label="Abrir notificações"
+            >
+               <Bell className="w-4 h-4" />
             </Button>
-          )}
 
-          <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-            <SheetTrigger render={<Button variant="ghost" size="icon" className={`lg:hidden ${iconButtonClass}`} />}>
-                <Menu className="w-5 h-5" />
-                <span className="sr-only">Abrir menu</span>
-            </SheetTrigger>
-            <SheetContent side="right" className={`w-[300px] sm:w-[400px] ${shellPanelClass}`}>
-              <div className="flex flex-col gap-6 py-4">
-                <div className="flex items-center gap-2">
-                  <div className="app-brand-mark">
-                    <Droplets className="w-5 h-5" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className={iconButtonClass}
+              type="button"
+              onClick={toggleTheme}
+              aria-label={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              aria-pressed={isDark}
+              title={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
+            >
+               <ThemeIcon className="w-4 h-4" />
+            </Button>
+
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger render={<Button variant="ghost" aria-label="Abrir menu do usuário" className={`relative h-8 w-8 rounded-full ${isDark ? 'hover:bg-white/10' : 'hover:bg-slate-100'}`} />}>
+                    <Avatar className={`h-8 w-8 border shadow-sm ${isDark ? 'border-white/15' : 'border-slate-200'}`}>
+                      <AvatarFallback className={`${isDark ? 'bg-white/10 text-slate-50' : 'bg-cyan-50 text-cyan-950'} font-semibold`}>{displayName.substring(0,2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{displayName}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{roleLabel}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{userEmail}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setActiveDialog('settings')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Configurações</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={logout}
+                    className={isDark ? 'text-red-300 focus:bg-red-950/45 focus:text-red-200' : 'text-red-600 focus:bg-red-50 focus:text-red-700'}
+                  >
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button nativeButton={false} render={<NavLink to="/login" />} variant="default" size="sm">
+                Entrar
+              </Button>
+            )}
+
+            <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+              <SheetTrigger render={<Button variant="ghost" size="icon" className={`lg:hidden ${iconButtonClass}`} />}>
+                  <Menu className="w-5 h-5" />
+                  <span className="sr-only">Abrir menu</span>
+              </SheetTrigger>
+              <SheetContent side="right" className={`w-[300px] sm:w-[400px] ${shellPanelClass}`}>
+                <div className="flex flex-col gap-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <div className="app-brand-mark">
+                      <Droplets className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className={`block text-base font-bold leading-none ${brandTextClass}`}>SIGHIDRO</span>
+                      <span className={`mt-1 block text-[11px] uppercase font-semibold leading-none ${brandSubtextClass}`}>ERP Hídrico</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className={`block text-base font-bold leading-none ${brandTextClass}`}>SIGHIDRO</span>
-                    <span className={`mt-1 block text-[11px] uppercase font-semibold leading-none ${brandSubtextClass}`}>ERP Hídrico</span>
-                  </div>
+                  {renderNav('flex flex-col gap-2')}
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className={isDark ? 'border-white/10 bg-white/5 text-slate-100 hover:bg-white/10' : 'border-slate-200 bg-white text-slate-900 hover:bg-slate-50'}
+                    onClick={toggleTheme}
+                    aria-pressed={isDark}
+                  >
+                    <ThemeIcon className="mr-2 h-4 w-4" />
+                    {theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+                  </Button>
                 </div>
-                {renderNav('flex flex-col gap-2')}
-                <Button
-                  variant="outline"
-                  type="button"
-                  className={isDark ? 'border-white/10 bg-white/5 text-slate-100 hover:bg-white/10' : 'border-slate-200 bg-white text-slate-900 hover:bg-slate-50'}
-                  onClick={toggleTheme}
-                  aria-pressed={isDark}
-                >
-                  <ThemeIcon className="mr-2 h-4 w-4" />
-                  {theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
+              </SheetContent>
+            </Sheet>
 
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      <Dialog open={activeDialog === 'notifications'} onOpenChange={(open) => setActiveDialog(open ? 'notifications' : null)}>
+        <DialogContent className="sighidro-dialog">
+          <DialogHeader>
+            <DialogTitle>Notificações operacionais</DialogTitle>
+            <DialogDescription>Resumo rápido dos eventos mais importantes do SIGHIDRO.</DialogDescription>
+          </DialogHeader>
+          <div className="dialog-list">
+            <article>
+              <strong>Monitoramento disponível</strong>
+              <span>Use o módulo de monitoramento para acompanhar alertas e leituras dos ativos.</span>
+            </article>
+            <article>
+              <strong>Cadastro hídrico sincronizado</strong>
+              <span>Os botões de exportação e navegação agora executam ações reais.</span>
+            </article>
+          </div>
+          <NavLink className="primary-action dialog-action" to="/monitoramento" onClick={() => setActiveDialog(null)}>
+            Abrir monitoramento
+          </NavLink>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={activeDialog === 'settings'} onOpenChange={(open) => setActiveDialog(open ? 'settings' : null)}>
+        <DialogContent className="sighidro-dialog">
+          <DialogHeader>
+            <DialogTitle>Configurações</DialogTitle>
+            <DialogDescription>Atalhos da sessão atual e preferências do ambiente.</DialogDescription>
+          </DialogHeader>
+          <div className="dialog-list">
+            <article>
+              <strong>Tema</strong>
+              <span>{theme === 'dark' ? 'Modo escuro ativo.' : 'Modo claro ativo.'}</span>
+            </article>
+            <article>
+              <strong>Usuário</strong>
+              <span>{displayName} · {roleLabel}</span>
+            </article>
+          </div>
+          <div className="dialog-actions">
+            <button className="secondary-action" type="button" onClick={toggleTheme}>
+              <ThemeIcon size={17} />
+              Alternar tema
+            </button>
+            <NavLink className="primary-action" to="/cadastro" onClick={() => setActiveDialog(null)}>
+              Abrir cadastro
+            </NavLink>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
