@@ -237,79 +237,73 @@ function downloadRecordsCsv(records: HydroRecord[], filename: string) {
 
 function downloadReportPdf(records: HydroRecord[]) {
   const pdf = buildReportPdf(records);
-  downloadBlob(new Blob([pdf], { type: 'application/pdf' }), 'sighidro-relatorio-operacional.pdf');
+  downloadNamedFile([pdf], 'sighidro-relatorio-operacional.pdf', 'application/pdf');
 }
 
 function downloadReportWord(records: HydroRecord[]) {
-  downloadTextFile(`\uFEFF${buildReportHtml(records)}`, 'sighidro-relatorio-operacional.doc', 'application/msword;charset=utf-8');
+  downloadNamedFile(
+    [buildReportDocx(records)],
+    'sighidro-relatorio-operacional.docx',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  );
 }
 
-function buildReportHtml(records: HydroRecord[]) {
+function buildReportDocx(records: HydroRecord[]) {
   const totalFlow = records.reduce((total, record) => total + Number(record.flowRate || 0), 0);
   const pendingCount = records.filter((record) => record.status !== 'operando').length;
   const generatedAt = new Date().toLocaleString('pt-BR');
-  const rows = records
-    .map(
-      (record) => `
-        <tr>
-          <td>${escapeHtml(record.code)}</td>
-          <td>${escapeHtml(record.name)}</td>
-          <td>${escapeHtml(categoryMeta[record.category].label)}</td>
-          <td>${escapeHtml(statusLabel[record.status])}</td>
-          <td>${escapeHtml(record.location)}</td>
-          <td>${escapeHtml(String(record.flowRate ?? '-'))}</td>
-          <td>${escapeHtml(String(resolveLevel(record) || '-'))}</td>
-          <td>${escapeHtml(record.lastReading)}</td>
-        </tr>
-      `,
-    )
-    .join('');
+  const tableRows = records.map((record) =>
+    wordTableRow([
+      record.code,
+      record.name,
+      categoryMeta[record.category].label,
+      statusLabel[record.status],
+      record.location,
+      `${record.flowRate ?? '-'} m3/h`,
+      resolveLevel(record) || '-',
+      record.lastReading,
+    ]),
+  );
 
-  const html = `<!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8" />
-  <title>Relatório SIGHIDRO</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 32px; color: #0f172a; }
-    h1 { margin: 0 0 8px; font-size: 26px; }
-    p { margin: 0 0 20px; color: #475569; }
-    .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 24px 0; }
-    .metric { border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; }
-    .metric span { display: block; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; }
-    .metric strong { display: block; margin-top: 8px; font-size: 22px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 12px; }
-    th { background: #f8fafc; color: #334155; text-transform: uppercase; }
-  </style>
-</head>
-<body>
-  <h1>Relatório administrativo e operacional SIGHIDRO</h1>
-  <p>Gerado em ${escapeHtml(generatedAt)} a partir dos registros cadastrados.</p>
-  <section class="summary">
-    <div class="metric"><span>Ativos</span><strong>${records.length}</strong></div>
-    <div class="metric"><span>Ocorrências</span><strong>${pendingCount}</strong></div>
-    <div class="metric"><span>Vazão cadastrada</span><strong>${totalFlow} m³/h</strong></div>
-  </section>
-  <table>
-    <thead>
-      <tr>
-        <th>Código</th>
-        <th>Nome</th>
-        <th>Tipo</th>
-        <th>Status</th>
-        <th>Localidade</th>
-        <th>Vazão</th>
-        <th>Nível</th>
-        <th>Última medição</th>
-      </tr>
-    </thead>
-    <tbody>${rows}</tbody>
-  </table>
-</body>
-</html>`;
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:r><w:rPr><w:b/><w:sz w:val="32"/></w:rPr><w:t>Relatório administrativo e operacional SIGHIDRO</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Gerado em ${escapeXml(generatedAt)} a partir dos registros cadastrados.</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Ativos: ${records.length} | Ocorrências: ${pendingCount} | Vazão cadastrada: ${totalFlow} m3/h</w:t></w:r></w:p>
+    <w:p/>
+    <w:tbl>
+      <w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="CBD5E1"/><w:left w:val="single" w:sz="4" w:space="0" w:color="CBD5E1"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="CBD5E1"/><w:right w:val="single" w:sz="4" w:space="0" w:color="CBD5E1"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="E2E8F0"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="E2E8F0"/></w:tblBorders></w:tblPr>
+      ${wordTableRow(['Código', 'Nome', 'Tipo', 'Status', 'Localidade', 'Vazão', 'Nível', 'Última medição'])}
+      ${tableRows.join('')}
+    </w:tbl>
+    <w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720"/></w:sectPr>
+  </w:body>
+</w:document>`;
 
-  return html;
+  return createZip([
+    {
+      path: '[Content_Types].xml',
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`,
+    },
+    {
+      path: '_rels/.rels',
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`,
+    },
+    { path: 'word/document.xml', content: documentXml },
+  ]);
+}
+
+function wordTableRow(cells: Array<string | number>) {
+  return `<w:tr>${cells.map((cell) => `<w:tc><w:tcPr><w:tcW w:w="1500" w:type="dxa"/></w:tcPr><w:p><w:r><w:t>${escapeXml(String(cell))}</w:t></w:r></w:p></w:tc>`).join('')}</w:tr>`;
 }
 
 function buildReportPdf(records: HydroRecord[]) {
@@ -418,19 +412,129 @@ function pdfColumn(value: string | number, width: number) {
   return text.padEnd(width, ' ');
 }
 
-function downloadTextFile(content: string, filename: string, type: string) {
-  downloadBlob(new Blob([content], { type }), filename);
+function createZip(entries: Array<{ content: string | Uint8Array; path: string }>) {
+  const encoder = new TextEncoder();
+  const chunks: Uint8Array[] = [];
+  const centralChunks: Uint8Array[] = [];
+  let offset = 0;
+
+  entries.forEach((entry) => {
+    const filename = encoder.encode(entry.path);
+    const data = typeof entry.content === 'string' ? encoder.encode(entry.content) : entry.content;
+    const crc = crc32(data);
+    const localHeader = new Uint8Array(30);
+    const localView = new DataView(localHeader.buffer);
+
+    localView.setUint32(0, 0x04034b50, true);
+    localView.setUint16(4, 20, true);
+    localView.setUint16(6, 0, true);
+    localView.setUint16(8, 0, true);
+    localView.setUint16(10, 0, true);
+    localView.setUint16(12, 0, true);
+    localView.setUint32(14, crc, true);
+    localView.setUint32(18, data.length, true);
+    localView.setUint32(22, data.length, true);
+    localView.setUint16(26, filename.length, true);
+    localView.setUint16(28, 0, true);
+
+    chunks.push(localHeader, filename, data);
+
+    const centralHeader = new Uint8Array(46);
+    const centralView = new DataView(centralHeader.buffer);
+
+    centralView.setUint32(0, 0x02014b50, true);
+    centralView.setUint16(4, 20, true);
+    centralView.setUint16(6, 20, true);
+    centralView.setUint16(8, 0, true);
+    centralView.setUint16(10, 0, true);
+    centralView.setUint16(12, 0, true);
+    centralView.setUint16(14, 0, true);
+    centralView.setUint32(16, crc, true);
+    centralView.setUint32(20, data.length, true);
+    centralView.setUint32(24, data.length, true);
+    centralView.setUint16(28, filename.length, true);
+    centralView.setUint16(30, 0, true);
+    centralView.setUint16(32, 0, true);
+    centralView.setUint16(34, 0, true);
+    centralView.setUint16(36, 0, true);
+    centralView.setUint32(38, 0, true);
+    centralView.setUint32(42, offset, true);
+    centralChunks.push(centralHeader, filename);
+
+    offset += localHeader.length + filename.length + data.length;
+  });
+
+  const centralDirectory = concatBytes(centralChunks);
+  const endRecord = new Uint8Array(22);
+  const endView = new DataView(endRecord.buffer);
+
+  endView.setUint32(0, 0x06054b50, true);
+  endView.setUint16(4, 0, true);
+  endView.setUint16(6, 0, true);
+  endView.setUint16(8, entries.length, true);
+  endView.setUint16(10, entries.length, true);
+  endView.setUint32(12, centralDirectory.length, true);
+  endView.setUint32(16, offset, true);
+  endView.setUint16(20, 0, true);
+
+  return concatBytes([...chunks, centralDirectory, endRecord]);
 }
 
-function downloadBlob(blob: Blob, filename: string) {
+function concatBytes(chunks: Uint8Array[]) {
+  const length = chunks.reduce((total, chunk) => total + chunk.length, 0);
+  const result = new Uint8Array(length);
+  let offset = 0;
+
+  chunks.forEach((chunk) => {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  });
+
+  return result;
+}
+
+function crc32(data: Uint8Array) {
+  let crc = 0xffffffff;
+
+  data.forEach((byte) => {
+    crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  });
+
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+const CRC_TABLE = Array.from({ length: 256 }, (_, index) => {
+  let value = index;
+
+  for (let bit = 0; bit < 8; bit += 1) {
+    value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+  }
+
+  return value >>> 0;
+});
+
+function downloadTextFile(content: string, filename: string, type: string) {
+  downloadNamedFile([content], filename, type);
+}
+
+function downloadNamedFile(parts: BlobPart[], filename: string, type: string) {
+  const blob = typeof File === 'function' ? new File(parts, filename, { type }) : new Blob(parts, { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
+
   link.href = url;
   link.download = filename;
+  link.setAttribute('download', filename);
+  link.rel = 'noopener';
+  link.style.display = 'none';
+
   document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+
+  window.setTimeout(() => {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, 1000);
 }
 
 function resolveLevel(record: HydroRecord) {
@@ -462,7 +566,7 @@ function escapePdfText(value: string) {
   return value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 }
 
-function escapeHtml(value: string) {
+function escapeXml(value: string) {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

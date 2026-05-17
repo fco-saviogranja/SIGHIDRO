@@ -56,7 +56,7 @@ test('botões principais abrem modal, redirecionam e exportam', async ({ page })
 
   const wordDownload = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Baixar Word' }).click();
-  expect((await wordDownload).suggestedFilename()).toBe('sighidro-relatorio-operacional.doc');
+  expect((await wordDownload).suggestedFilename()).toBe('sighidro-relatorio-operacional.docx');
 
   const reportCsvDownload = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Baixar CSV' }).click();
