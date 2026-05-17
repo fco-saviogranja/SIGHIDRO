@@ -50,9 +50,13 @@ test('botões principais abrem modal, redirecionam e exportam', async ({ page })
   expect((await sheetDownload).suggestedFilename()).toBe('sighidro-planilha-ativos.tsv');
 
   await page.goto('/relatorios');
-  const reportDownload = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Baixar relatório' }).click();
-  expect((await reportDownload).suggestedFilename()).toBe('sighidro-relatorio-operacional.html');
+  const pdfDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Baixar PDF' }).click();
+  expect((await pdfDownload).suggestedFilename()).toBe('sighidro-relatorio-operacional.pdf');
+
+  const wordDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Baixar Word' }).click();
+  expect((await wordDownload).suggestedFilename()).toBe('sighidro-relatorio-operacional.doc');
 
   const reportCsvDownload = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Baixar CSV' }).click();

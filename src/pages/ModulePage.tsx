@@ -184,8 +184,11 @@ function ReportsWorkspace({ records }: { records: HydroRecord[] }) {
         <PanelHeader title="Gerar relatório" icon={<Download size={19} />} />
         <p>Baixe o resumo administrativo com indicadores, ativos cadastrados e situação operacional atual.</p>
         <div className="report-actions">
-          <button className="primary-action" type="button" onClick={() => downloadReportHtml(records)}>
-            Baixar relatório
+          <button className="primary-action" type="button" onClick={() => downloadReportPdf(records)}>
+            Baixar PDF
+          </button>
+          <button className="secondary-action" type="button" onClick={() => downloadReportWord(records)}>
+            Baixar Word
           </button>
           <button className="secondary-action" type="button" onClick={() => downloadRecordsCsv(records, 'sighidro-relatorio-ativos.csv')}>
             Baixar CSV
@@ -232,7 +235,16 @@ function downloadRecordsCsv(records: HydroRecord[], filename: string) {
   downloadTextFile(`\uFEFF${csv}`, filename, 'text/csv;charset=utf-8');
 }
 
-function downloadReportHtml(records: HydroRecord[]) {
+function downloadReportPdf(records: HydroRecord[]) {
+  const pdf = buildReportPdf(records);
+  downloadBlob(new Blob([pdf], { type: 'application/pdf' }), 'sighidro-relatorio-operacional.pdf');
+}
+
+function downloadReportWord(records: HydroRecord[]) {
+  downloadTextFile(`\uFEFF${buildReportHtml(records)}`, 'sighidro-relatorio-operacional.doc', 'application/msword;charset=utf-8');
+}
+
+function buildReportHtml(records: HydroRecord[]) {
   const totalFlow = records.reduce((total, record) => total + Number(record.flowRate || 0), 0);
   const pendingCount = records.filter((record) => record.status !== 'operando').length;
   const generatedAt = new Date().toLocaleString('pt-BR');
@@ -297,11 +309,120 @@ function downloadReportHtml(records: HydroRecord[]) {
 </body>
 </html>`;
 
-  downloadTextFile(html, 'sighidro-relatorio-operacional.html', 'text/html;charset=utf-8');
+  return html;
+}
+
+function buildReportPdf(records: HydroRecord[]) {
+  const totalFlow = records.reduce((total, record) => total + Number(record.flowRate || 0), 0);
+  const pendingCount = records.filter((record) => record.status !== 'operando').length;
+  const generatedAt = new Date().toLocaleString('pt-BR');
+  const pages: string[][] = [[]];
+  let y = 790;
+
+  const currentPage = () => pages[pages.length - 1];
+  const addPage = () => {
+    pages.push([]);
+    y = 790;
+  };
+  const addLine = (text: string, options: { font?: 'F1' | 'F2'; lineHeight?: number; size?: number; x?: number } = {}) => {
+    const { font = 'F1', lineHeight = 16, size = 10, x = 50 } = options;
+
+    if (y < 50) {
+      addPage();
+    }
+
+    currentPage().push(`BT /${font} ${size} Tf ${x} ${y} Td (${escapePdfText(toPdfText(text))}) Tj ET`);
+    y -= lineHeight;
+  };
+
+  addLine('Relatorio administrativo e operacional SIGHIDRO', { lineHeight: 26, size: 18 });
+  addLine(`Gerado em ${generatedAt}`, { lineHeight: 24, size: 10 });
+  addLine(`Ativos: ${records.length} | Ocorrencias: ${pendingCount} | Vazao cadastrada: ${totalFlow} m3/h`, { lineHeight: 28, size: 11 });
+  addLine('Codigo     Nome                     Tipo         Status       Vazao     Nivel    Ultima medicao', { font: 'F2', lineHeight: 14, size: 8 });
+  addLine('--------------------------------------------------------------------------------------------------', { font: 'F2', lineHeight: 12, size: 8 });
+
+  records.forEach((record) => {
+    addLine(
+      [
+        pdfColumn(record.code, 10),
+        pdfColumn(record.name, 24),
+        pdfColumn(categoryMeta[record.category].label, 12),
+        pdfColumn(statusLabel[record.status], 12),
+        pdfColumn(`${record.flowRate ?? '-'} m3/h`, 9),
+        pdfColumn(resolveLevel(record) || '-', 8),
+        pdfColumn(record.lastReading, 16),
+      ].join(' '),
+      { font: 'F2', lineHeight: 13, size: 8 },
+    );
+  });
+
+  return createPdfDocument(pages.map((page) => page.join('\n')));
+}
+
+function createPdfDocument(pageContents: string[]) {
+  const fontHelveticaId = 3;
+  const fontCourierId = 4;
+  const pageObjectStartId = 5;
+  const maxObjectId = pageObjectStartId + pageContents.length * 2 - 1;
+  const kids = pageContents.map((_, index) => `${pageObjectStartId + index * 2} 0 R`).join(' ');
+  const objects: Array<{ body: string; id: number }> = [
+    { id: 1, body: '<< /Type /Catalog /Pages 2 0 R >>' },
+    { id: 2, body: `<< /Type /Pages /Kids [${kids}] /Count ${pageContents.length} >>` },
+    { id: fontHelveticaId, body: '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>' },
+    { id: fontCourierId, body: '<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>' },
+  ];
+
+  pageContents.forEach((content, index) => {
+    const pageId = pageObjectStartId + index * 2;
+    const contentId = pageId + 1;
+
+    objects.push({
+      id: pageId,
+      body: `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${fontHelveticaId} 0 R /F2 ${fontCourierId} 0 R >> >> /Contents ${contentId} 0 R >>`,
+    });
+    objects.push({
+      id: contentId,
+      body: `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+    });
+  });
+
+  const offsets: number[] = [];
+  let pdf = '%PDF-1.4\n';
+
+  objects
+    .sort((a, b) => a.id - b.id)
+    .forEach((object) => {
+      offsets[object.id] = pdf.length;
+      pdf += `${object.id} 0 obj\n${object.body}\nendobj\n`;
+    });
+
+  const xrefStart = pdf.length;
+  pdf += `xref\n0 ${maxObjectId + 1}\n0000000000 65535 f \n`;
+
+  for (let id = 1; id <= maxObjectId; id += 1) {
+    pdf += `${String(offsets[id] ?? 0).padStart(10, '0')} 00000 n \n`;
+  }
+
+  pdf += `trailer\n<< /Size ${maxObjectId + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+
+  return pdf;
+}
+
+function pdfColumn(value: string | number, width: number) {
+  const text = toPdfText(String(value));
+
+  if (text.length > width) {
+    return `${text.slice(0, Math.max(0, width - 1))}~`;
+  }
+
+  return text.padEnd(width, ' ');
 }
 
 function downloadTextFile(content: string, filename: string, type: string) {
-  const blob = new Blob([content], { type });
+  downloadBlob(new Blob([content], { type }), filename);
+}
+
+function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -326,6 +447,19 @@ function resolveLevel(record: HydroRecord) {
 
 function csvCell(value: string | number) {
   return `"${String(value).replace(/"/g, '""')}"`;
+}
+
+function toPdfText(value: string) {
+  return value
+    .replace(/³/g, '3')
+    .replace(/–/g, '-')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x20-\x7E]/g, '');
+}
+
+function escapePdfText(value: string) {
+  return value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 }
 
 function escapeHtml(value: string) {
