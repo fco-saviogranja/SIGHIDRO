@@ -2,7 +2,7 @@ const AUTH_TOKEN_KEY = 'sighidro:auth:token';
 const AUTH_EMAIL_KEY = 'sighidro:auth:email';
 const AUTH_ROLE_KEY = 'sighidro:auth:role';
 
-export type AuthRole = 'admin' | 'operator';
+export type AuthRole = 'administrador' | 'gestor' | 'técnico';
 
 const canUseStorage = () => typeof window !== 'undefined' && Boolean(window.localStorage);
 
@@ -28,10 +28,10 @@ export const readAuthRole = (): AuthRole | null => {
   }
 
   const role = window.localStorage.getItem(AUTH_ROLE_KEY);
-  return role === 'admin' || role === 'operator' ? role : null;
+  return role === 'administrador' || role === 'gestor' || role === 'técnico' ? (role as AuthRole) : null;
 };
 
-export const persistAuth = (token: string, email?: string, role: AuthRole = 'operator') => {
+export const persistAuth = (token: string, email?: string, role: AuthRole = 'técnico') => {
   if (!canUseStorage()) {
     return;
   }

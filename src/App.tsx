@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { Navigate, NavLink, Outlet, Route, Routes } from 'react-router-dom';
-import { Bell, Droplets, Menu, Moon, Settings, Sun } from 'lucide-react';
+import { Bell, Droplets, Menu, Moon, Settings, Sun, Users } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { HydroRegistryProvider } from './HydroRegistryContext';
 import { useTheme } from './ThemeContext';
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { Button } from './components/ui/button';
+import { UserManagementModal } from './components/UserManagementModal';
 
 const CadastroHidrico = lazy(() => import('./pages/CadastroHidrico'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -79,12 +80,19 @@ function AppShell() {
 }
 
 function Header() {
-  const [activeDialog, setActiveDialog] = useState<'notifications' | 'settings' | null>(null);
+  const [activeDialog, setActiveDialog] = useState<'notifications' | 'settings' | 'user-management' | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { isAuthenticated, userEmail, userRole, logout } = useAuth();
+  const { isAuthenticated, userEmail, userRole, logout, canManageUsers } = useAuth();
   const { isDark, theme, toggleTheme } = useTheme();
-  const roleLabel = userRole === 'admin' ? 'Administrador' : userContext.role;
-  const displayName = userRole === 'admin' ? 'Admin SIGHIDRO' : userContext.name;
+  const roleLabel = 
+    userRole === 'administrador' 
+      ? 'Administrador' 
+      : userRole === 'gestor'
+      ? 'Gestor'
+      : userRole === 'técnico'
+      ? 'Técnico'
+      : userContext.role;
+  const displayName = userRole === 'administrador' ? 'Admin SIGHIDRO' : userContext.name;
   const ThemeIcon = isDark ? Sun : Moon;
   const iconButtonClass = isDark
     ? 'text-slate-300 hover:bg-white/10 hover:text-white'
@@ -192,6 +200,15 @@ function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  {canManageUsers && (
+                    <>
+                      <DropdownMenuItem onClick={() => setActiveDialog('user-management')}>
+                        <Users className="mr-2 h-4 w-4" />
+                        <span>Gerenciar Usuários</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem onClick={() => setActiveDialog('settings')}>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Configurações</span>
@@ -295,6 +312,12 @@ function Header() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <UserManagementModal
+        open={activeDialog === 'user-management'}
+        onOpenChange={(open) => setActiveDialog(open ? 'user-management' : null)}
+        userRole={userRole}
+      />
     </>
   );
 }

@@ -17,6 +17,7 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  canManageUsers: boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -29,7 +30,7 @@ const canUseDevAdminFallback = (email: string, password: string) =>
 
 const persistDevAdminSession = (email: string) => {
   const fallbackToken = `dev-admin-${Date.now()}`;
-  persistAuth(fallbackToken, email, 'admin');
+  persistAuth(fallbackToken, email, 'administrador');
   return fallbackToken;
 };
 
@@ -59,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!isApiBackendEnabled && canUseDevAdminFallback(normalizedEmail, password)) {
         const fallbackToken = persistDevAdminSession(normalizedEmail);
         setToken(fallbackToken);
-        setUserEmail(normalizedEmail);
+        setUserEmail(normaistradorlizedEmail);
         setUserRole('admin');
         return;
       }
@@ -86,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const resolvedEmail = payload.user?.email ?? normalizedEmail;
-      const resolvedRole = payload.user?.role === 'admin' ? 'admin' : 'operator';
+      const resolvedRole = (payload.user?.role as AuthRole) || 'técnico';
       persistAuth(payload.token, resolvedEmail, resolvedRole);
       setToken(payload.token);
       setUserEmail(resolvedEmail);
@@ -96,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const fallbackToken = persistDevAdminSession(normalizedEmail);
         setToken(fallbackToken);
         setUserEmail(normalizedEmail);
-        setUserRole('admin');
+        setUserRole('administrador');
         return;
       }
 
@@ -147,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
+      canManageUsers: userRole === 'administrador' || userRole === 'gestor',
     }),
     [isBusy, login, logout, register, token, userEmail, userRole],
   );
