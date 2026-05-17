@@ -200,16 +200,7 @@ function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {canManageUsers && (
-                    <>
-                      <DropdownMenuItem onClick={() => setActiveDialog('user-management')}>
-                        <Users className="mr-2 h-4 w-4" />
-                        <span>Gerenciar Usuários</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  <DropdownMenuItem onClick={() => setActiveDialog('settings')}>
+                  <DropdownMenuItem onClick={() => setActiveDialog(canManageUsers ? 'user-management' : 'settings')}>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Configurações</span>
                   </DropdownMenuItem>
