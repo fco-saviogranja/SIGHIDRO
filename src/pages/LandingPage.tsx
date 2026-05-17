@@ -1,4 +1,4 @@
-import { Activity, ArrowRight, Droplets, FileBarChart, Gauge, ShieldCheck } from 'lucide-react';
+import { Activity, ArrowRight, Droplets, FileBarChart, Gauge } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
@@ -49,9 +49,7 @@ function LandingPage() {
     <main className="landing-page">
       <header className="landing-header">
         <Link className="landing-brand" to="/" aria-label="SIGHIDRO">
-          <span className="brand-mark" aria-hidden="true">
-            <Droplets size={24} />
-          </span>
+          <img className="landing-brand-logo" src="/logo.png" alt="Logo SIGHIDRO" />
           <span>
             <strong>SIGHIDRO</strong>
             <small>Gestão hídrica municipal</small>
@@ -68,7 +66,7 @@ function LandingPage() {
         <motion.div className="landing-hero-content" initial="hidden" animate="show" variants={stagger}>
           <motion.div className="landing-logo-shell" variants={fadeUp}>
             <div className="landing-logo" aria-hidden="true">
-              <Droplets size={52} />
+              <img src="/logo.png" alt="Logo SIGHIDRO" className="landing-logo-image" />
             </div>
             <div className="landing-logo-label">
               <strong>SIGHIDRO</strong>

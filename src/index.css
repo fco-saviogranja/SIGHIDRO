@@ -2832,6 +2832,21 @@
   color: #f8fafc;
 }
 
+.landing-logo-image {
+  width: 72%;
+  height: auto;
+  object-fit: contain;
+}
+
+.landing-brand-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(3, 7, 18, 0.8);
+  border: 1px solid rgba(103, 232, 249, 0.24);
+}
+
 .landing-logo-label {
   display: grid;
   gap: 6px;
