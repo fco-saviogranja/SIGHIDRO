@@ -18,6 +18,7 @@ const LoginPage = lazy(() => import('./pages/Login'));
 const Manutencao = lazy(() => import('./pages/Manutencao'));
 const ModulePage = lazy(() => import('./pages/ModulePage'));
 const Monitoramento = lazy(() => import('./pages/Monitoramento'));
+const Relatorios = lazy(() => import('./pages/Relatorios'));
 
 function PageSuspense({ children }: { children: ReactNode }) {
   return <Suspense fallback={<RouteLoading />}>{children}</Suspense>;
@@ -58,7 +59,7 @@ function App() {
           <Route path="monitoramento" element={<Monitoramento />} />
           <Route path="manutencao" element={<Manutencao />} />
           <Route path="mapa" element={<ModulePage variant="mapa" />} />
-          <Route path="relatorios" element={<ModulePage variant="relatorios" />} />
+          <Route path="relatorios" element={<Relatorios />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
