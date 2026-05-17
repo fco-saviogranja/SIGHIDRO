@@ -16,6 +16,8 @@
     -webkit-font-smoothing: antialiased;
   }
 
+}
+
 @import "./styles/legacy.css";
 .filter-chip {
   min-height: 34px;

@@ -4,7 +4,7 @@ module.exports = {
     'stylelint-config-tailwindcss',
     'stylelint-config-prettier'
   ],
-  ignoreFiles: ['src/styles/legacy.css', 'public/**', 'node_modules/**', 'dist/**'],
+  ignoreFiles: ['src/styles/legacy.css', 'src/styles/theme.css', 'public/**', 'node_modules/**', 'dist/**'],
   rules: {
     'at-rule-no-unknown': [true, { ignoreAtRules: ['tailwind', 'apply', 'variants', 'responsive', 'screen'] }],
     'color-hex-case': 'lower',
