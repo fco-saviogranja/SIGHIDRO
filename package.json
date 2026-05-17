@@ -52,7 +52,6 @@
     "playwright": "^1.39.2",
     "postcss": "^8.4.47",
     "stylelint": "^17.11.1",
-    "stylelint-config-prettier": "^9.0.5",
     "stylelint-config-standard": "^40.0.0",
     "stylelint-config-tailwindcss": "^1.0.1",
     "stylelint-order": "^8.1.1",
