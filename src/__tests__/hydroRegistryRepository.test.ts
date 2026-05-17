@@ -8,11 +8,23 @@ describe('localHydroRegistryRepository', () => {
     window.localStorage.clear();
   });
 
-  it('saves and loads registry from localStorage', async () => {
-    await localHydroRegistryRepository.save(defaultHydroRegistry);
-    const loaded = await localHydroRegistryRepository.load();
-    expect(loaded.poço.length).toBeGreaterThan(0);
-    expect(loaded).toEqual(defaultHydroRegistry);
+  it('loads and mutates assets from localStorage', async () => {
+    const loaded = await localHydroRegistryRepository.loadAssets();
+    expect(loaded.some((asset) => asset.category === 'poço')).toBe(true);
+
+    const created = await localHydroRegistryRepository.createAsset('poço', {
+      name: 'Poço Teste',
+      location: 'Zona Teste',
+      status: 'operando',
+      responsible: 'Operador Hidráulico',
+      flowRate: 10,
+      lastReading: 'agora',
+      notes: '',
+    });
+
+    expect(created.code).toMatch(/^POC-/);
+    const afterCreate = await localHydroRegistryRepository.loadAssets({ q: 'Poço Teste' });
+    expect(afterCreate).toHaveLength(1);
   });
 });
 
@@ -22,24 +34,21 @@ describe('apiHydroRegistryRepository', () => {
     vi.restoreAllMocks();
   });
 
-  it('loads registry from API and persists locally', async () => {
-    // mock auth token
+  it('loads assets from API and persists locally', async () => {
     vi.spyOn(authStorage, 'readAuthToken').mockImplementation(() => 'fake-token');
 
-    // mock fetch
+    const assets = Object.values(defaultHydroRegistry).flat();
     const fakeResponse = {
       ok: true,
-      text: async () => JSON.stringify({ data: defaultHydroRegistry }),
+      text: async () => JSON.stringify({ data: assets }),
     } as unknown as Response;
 
-    // @ts-ignore
     global.fetch = vi.fn().mockResolvedValue(fakeResponse);
 
-    const loaded = await apiHydroRegistryRepository.load();
-    expect(loaded.poço.length).toBeGreaterThan(0);
+    const loaded = await apiHydroRegistryRepository.loadAssets();
+    expect(loaded.some((asset) => asset.category === 'poço')).toBe(true);
 
-    // localStorage should have been updated
-    const stored = JSON.parse(window.localStorage.getItem('sighidro:hydro-registry:v1') || '{}');
-    expect(stored.poço).toBeDefined();
+    const stored = JSON.parse(window.localStorage.getItem('sighidro:hydro-assets:v2') || '[]');
+    expect(stored.length).toBeGreaterThan(0);
   });
 });

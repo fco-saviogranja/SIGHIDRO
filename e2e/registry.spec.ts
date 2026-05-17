@@ -1,17 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const registerAndLogin = async (page: Page) => {
-  const email = `registry-${Date.now()}@example.com`;
-  const password = 'Test12345';
-
+const loginAsAdmin = async (page: Page) => {
   await page.goto('/login');
   await page.evaluate(() => window.localStorage.clear());
   await page.reload();
 
-  await page.click('button.auth-toggle');
-  await page.fill('input[type="email"]', email);
-  await page.fill('input[type="password"]', password);
-  await page.click('button:has-text("Criar conta")');
+  await page.fill('input[type="email"]', 'admin@sighidro.gov.br');
+  await page.fill('input[type="password"]', 'Admin@2026');
+  await page.click('button:has-text("Entrar")');
   await page.waitForURL('**/dashboard', { timeout: 10000 });
 };
 
@@ -26,13 +22,14 @@ const createWell = async (
     status?: string;
   },
 ) => {
-  await page.getByLabel('Nome', { exact: true }).fill(record.name);
-  await page.getByLabel('Localização / setor').fill(record.location);
-  await page.getByLabel('Status').selectOption(record.status ?? 'atenção');
-  await page.getByLabel('Vazão atual (m³/h)').fill(record.flowRate ?? '42');
-  await page.getByLabel('Latitude').fill(record.latitude ?? '-7.571111');
-  await page.getByLabel('Longitude').fill(record.longitude ?? '-39.281111');
-  await page.getByRole('button', { name: 'Cadastrar Poço' }).click();
+  const form = page.locator('form.registry-form');
+  await form.getByLabel('Nome', { exact: true }).fill(record.name);
+  await form.getByLabel('Localização / setor').fill(record.location);
+  await form.getByLabel('Status').selectOption(record.status ?? 'atenção');
+  await form.getByLabel('Vazão atual (m³/h)').fill(record.flowRate ?? '42');
+  await form.getByLabel('Latitude').fill(record.latitude ?? '-7.571111');
+  await form.getByLabel('Longitude').fill(record.longitude ?? '-39.281111');
+  await form.getByRole('button', { name: 'Cadastrar Poço' }).click();
 };
 
 const readStoredWells = async (page: Page) =>
@@ -46,7 +43,7 @@ test('cadastro de poço persiste e aparece no dashboard', async ({ page }) => {
   const assetName = `Poço E2E ${Date.now()}`;
   const locationName = 'Zona E2E - Teste';
 
-  await registerAndLogin(page);
+  await loginAsAdmin(page);
   await page.goto('/cadastro');
 
   await createWell(page, { name: assetName, location: locationName });
@@ -65,12 +62,31 @@ test('cadastro de poço persiste e aparece no dashboard', async ({ page }) => {
   await expect(dashboardRow).toContainText('42 m³/h');
 });
 
+test('cadastro registra leitura e manutenção vinculada ao ativo', async ({ page }) => {
+  const assetName = `Poço Completo ${Date.now()}`;
+
+  await loginAsAdmin(page);
+  await page.goto('/cadastro');
+  await createWell(page, { name: assetName, location: 'Zona Completa E2E' });
+
+  await page.locator('.registry-table .registry-row').filter({ hasText: assetName }).click();
+  await page.getByLabel('Vazão', { exact: true }).fill('66');
+  await page.getByLabel('Nível', { exact: true }).fill('73');
+  await page.getByLabel('Operador', { exact: true }).fill('Operador E2E');
+  await page.getByRole('button', { name: 'Registrar leitura' }).click();
+  await expect(page.locator('.mini-table').filter({ hasText: '66 m³/h' })).toBeVisible();
+
+  await page.getByLabel('Serviço').fill('Inspeção E2E');
+  await page.getByRole('button', { name: 'Abrir OS' }).click();
+  await expect(page.locator('.maintenance-mini-table').filter({ hasText: 'Inspeção E2E' })).toBeVisible();
+});
+
 test('edição e exclusão de poço atualizam cadastro e persistência local', async ({ page }) => {
   const timestamp = Date.now();
   const originalName = `Poço Editável ${timestamp}`;
   const editedName = `Poço Editado ${timestamp}`;
 
-  await registerAndLogin(page);
+  await loginAsAdmin(page);
   await page.goto('/cadastro');
   await createWell(page, {
     name: originalName,
@@ -80,13 +96,14 @@ test('edição e exclusão de poço atualizam cadastro e persistência local', a
   });
 
   await page.getByRole('button', { name: `Editar ${originalName}` }).click();
-  await page.getByLabel('Nome', { exact: true }).fill(editedName);
-  await page.getByLabel('Localização / setor').fill('Zona Editada E2E');
-  await page.getByLabel('Status').selectOption('parado');
-  await page.getByLabel('Vazão atual (m³/h)').fill('55');
-  await page.getByLabel('Latitude').fill('-7.572222');
-  await page.getByLabel('Longitude').fill('-39.282222');
-  await page.getByRole('button', { name: 'Salvar alterações' }).click();
+  const form = page.locator('form.registry-form');
+  await form.getByLabel('Nome', { exact: true }).fill(editedName);
+  await form.getByLabel('Localização / setor').fill('Zona Editada E2E');
+  await form.getByLabel('Status').selectOption('parado');
+  await form.getByLabel('Vazão atual (m³/h)').fill('55');
+  await form.getByLabel('Latitude').fill('-7.572222');
+  await form.getByLabel('Longitude').fill('-39.282222');
+  await form.getByRole('button', { name: 'Salvar alterações' }).click();
 
   const editedRegistryRow = page.locator('.registry-table .registry-row').filter({ hasText: editedName });
   await expect(editedRegistryRow).toBeVisible();

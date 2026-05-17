@@ -3,9 +3,30 @@
 Este projeto tem dois modos de dados:
 
 - `localStorage`: somente no navegador, sem backend real.
-- `api`: autenticação JWT + API Express + Postgres.
+- `api`: autenticação JWT + API Express + Postgres com base municipal compartilhada.
 
 Use `localStorage` no desenvolvimento local e `api` na nuvem pelo Render.
+
+## Cadastro Hídrico real
+
+O Cadastro Hídrico usa endpoints normalizados como fonte principal:
+
+- `GET /api/assets`: lista ativos com filtros `category`, `status`, `responsible`, `location` e `q`.
+- `POST /api/assets`: cria ativo municipal compartilhado.
+- `GET /api/assets/:id`: carrega um ativo.
+- `PATCH /api/assets/:id`: atualiza um ativo.
+- `DELETE /api/assets/:id`: exclui um ativo.
+- `GET /api/assets/:id/readings`: lista leituras do ativo.
+- `POST /api/assets/:id/readings`: registra leitura operacional.
+- `GET /api/assets/:id/maintenance`: lista ordens de manutenção do ativo.
+- `POST /api/assets/:id/maintenance`: abre ordem de manutenção.
+- `PATCH /api/assets/:id/maintenance`: atualiza ordem; envie `id` no corpo.
+- `GET /api/assets/export.csv`: exporta CSV com os filtros atuais.
+
+As tabelas principais são `hydro_assets`, `hydro_asset_readings`, `hydro_maintenance_orders` e `audit_log`.
+Todos os usuários autenticados podem editar; toda criação, alteração e exclusão grava auditoria com usuário, entidade e antes/depois.
+
+`/api/registry` permanece somente como compatibilidade para fluxos antigos.
 
 ## Render automatizado
 

@@ -4,211 +4,270 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react';
-import { defaultHydroRegistry } from './data';
-import { categoryMeta, categoryOrder } from './metadata';
+import { categoryOrder } from './metadata';
 import { hydroRegistryRepository } from './services/hydroRegistryRepository';
-import type { AssetCategory, HydroRecord, HydroRecordDraft, HydroRegistry } from './types';
+import type {
+  AssetCategory,
+  HydroAsset,
+  HydroAssetDraft,
+  HydroAssetReading,
+  HydroAssetReadingDraft,
+  HydroRegistry,
+  MaintenanceOrder,
+  MaintenanceOrderDraft,
+} from './types';
 
 type SyncStatus = 'idle' | 'syncing' | 'failed' | 'offline';
 
 type HydroRegistryContextValue = {
-  registry: HydroRegistry;
-  allRecords: HydroRecord[];
+  allRecords: HydroAsset[];
   backend: 'localStorage' | 'api';
-  syncStatus: SyncStatus;
+  createMaintenance: (assetId: string, draft: MaintenanceOrderDraft) => Promise<MaintenanceOrder>;
+  createReading: (assetId: string, draft: HydroAssetReadingDraft) => Promise<HydroAssetReading>;
+  createRecord: (category: AssetCategory, draft: HydroAssetDraft) => Promise<HydroAsset>;
+  deleteRecord: (category: AssetCategory, id: string) => Promise<void>;
+  exportAssetsCsv: (filters?: {
+    category?: AssetCategory | 'all';
+    location?: string;
+    q?: string;
+    responsible?: string;
+    status?: string;
+  }) => Promise<string>;
+  isLoading: boolean;
+  loadAssetDetails: (assetId: string) => Promise<void>;
+  maintenanceByAsset: Record<string, MaintenanceOrder[]>;
+  readingsByAsset: Record<string, HydroAssetReading[]>;
+  registry: HydroRegistry;
+  reloadAssets: () => Promise<boolean>;
+  resetRegistry: () => Promise<void>;
   retrySync: () => Promise<boolean>;
-  createRecord: (category: AssetCategory, draft: HydroRecordDraft) => void;
-  updateRecord: (category: AssetCategory, id: string, draft: HydroRecordDraft) => void;
-  deleteRecord: (category: AssetCategory, id: string) => void;
-  resetRegistry: () => void;
+  syncStatus: SyncStatus;
+  updateMaintenance: (assetId: string, orderId: string, draft: Partial<MaintenanceOrderDraft>) => Promise<MaintenanceOrder>;
+  updateRecord: (category: AssetCategory, id: string, draft: HydroAssetDraft) => Promise<HydroAsset>;
 };
 
 const HydroRegistryContext = createContext<HydroRegistryContextValue | null>(null);
 
-const makeId = () => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
-  }
+const emptyRegistry = (): HydroRegistry =>
+  categoryOrder.reduce((registry, category) => {
+    registry[category] = [];
+    return registry;
+  }, {} as HydroRegistry);
 
-  return `record-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
-
-const getNextCode = (category: AssetCategory, records: HydroRecord[]) => {
-  const prefix = categoryMeta[category].prefix;
-  const nextNumber =
-    records.reduce((max, record) => {
-      const current = Number(record.code.replace(/\D/g, ''));
-      return Number.isFinite(current) ? Math.max(max, current) : max;
-    }, 0) + 1;
-
-  return `${prefix}-${String(nextNumber).padStart(3, '0')}`;
-};
-
-const cloneDefaults = (): HydroRegistry => JSON.parse(JSON.stringify(defaultHydroRegistry)) as HydroRegistry;
+const groupAssets = (assets: HydroAsset[]): HydroRegistry =>
+  categoryOrder.reduce((registry, category) => {
+    registry[category] = assets.filter((asset) => asset.category === category);
+    return registry;
+  }, {} as HydroRegistry);
 
 export function HydroRegistryProvider({ children }: { children: ReactNode }) {
-  const [registry, setRegistry] = useState<HydroRegistry>(() => cloneDefaults());
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [assets, setAssets] = useState<HydroAsset[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
-  const registryRef = useRef(registry);
+  const [readingsByAsset, setReadingsByAsset] = useState<Record<string, HydroAssetReading[]>>({});
+  const [maintenanceByAsset, setMaintenanceByAsset] = useState<Record<string, MaintenanceOrder[]>>({});
 
-  useEffect(() => {
-    let isActive = true;
-    let didLoad = false;
-    const loadRegistry = async () => {
-      try {
-        const loaded = await hydroRegistryRepository.load();
-        if (isActive) {
-          setRegistry(loaded);
-          registryRef.current = loaded;
-          didLoad = true;
-        }
-      } catch {
-        if (isActive) {
-          setRegistry(cloneDefaults());
-        }
-      } finally {
-        if (isActive) {
-          setIsHydrated(true);
-        }
-      }
-    };
-
-    void loadRegistry();
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isHydrated) {
-      return;
-    }
-
-    let active = true;
-
-    const doSave = async () => {
-      setSyncStatus('syncing');
-      try {
-        const ok = await hydroRegistryRepository.save(registry);
-        if (active) {
-          setSyncStatus(ok ? 'idle' : 'failed');
-        }
-      } catch {
-        if (active) {
-          setSyncStatus('failed');
-        }
-      }
-    };
-
-    void doSave();
-
-    return () => {
-      active = false;
-    };
-  }, [isHydrated, registry]);
-
-  useEffect(() => {
-    registryRef.current = registry;
-  }, [registry]);
-
-  // Background sync when backend is API and hydrated
-  useEffect(() => {
-    if (!isHydrated) return;
-    if (hydroRegistryRepository.backend !== 'api') return;
-
-    const syncIntervalMs = Number(import.meta.env.VITE_SYNC_INTERVAL_MS ?? 60000);
-    const id = window.setInterval(() => {
-      void hydroRegistryRepository.save(registryRef.current).then((ok) => {
-        setSyncStatus(ok ? 'idle' : 'failed');
-      });
-    }, syncIntervalMs);
-
-    const onOnline = () => {
-      void hydroRegistryRepository.save(registryRef.current).then((ok) => {
-        setSyncStatus(ok ? 'idle' : 'failed');
-      });
-    };
-
-    window.addEventListener('online', onOnline);
-
-    return () => {
-      clearInterval(id);
-      window.removeEventListener('online', onOnline);
-    };
-  }, [isHydrated]);
-
-  const createRecord = useCallback((category: AssetCategory, draft: HydroRecordDraft) => {
-    setRegistry((current) => {
-      const records = current[category];
-      const record: HydroRecord = {
-        ...draft,
-        id: makeId(),
-        code: getNextCode(category, records),
-        category,
-      };
-
-      return {
-        ...current,
-        [category]: [record, ...records],
-      };
-    });
-  }, []);
-
-  const updateRecord = useCallback((category: AssetCategory, id: string, draft: HydroRecordDraft) => {
-    setRegistry((current) => ({
-      ...current,
-      [category]: current[category].map((record) =>
-        record.id === id ? { ...record, ...draft, category } : record,
-      ),
-    }));
-  }, []);
-
-  const deleteRecord = useCallback((category: AssetCategory, id: string) => {
-    setRegistry((current) => ({
-      ...current,
-      [category]: current[category].filter((record) => record.id !== id),
-    }));
-  }, []);
-
-  const resetRegistry = useCallback(() => {
-    setRegistry(cloneDefaults());
-  }, []);
-
-  const retrySync = useCallback(async () => {
+  const reloadAssets = useCallback(async () => {
     setSyncStatus('syncing');
+    setIsLoading(true);
     try {
-      const ok = await hydroRegistryRepository.save(registryRef.current);
-      setSyncStatus(ok ? 'idle' : 'failed');
-      return ok;
+      const loaded = await hydroRegistryRepository.loadAssets();
+      setAssets(loaded);
+      setSyncStatus('idle');
+      return true;
+    } catch {
+      setSyncStatus(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'failed');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void reloadAssets();
+  }, [reloadAssets]);
+
+  const loadAssetDetails = useCallback(async (assetId: string) => {
+    try {
+      const [readings, maintenance] = await Promise.all([
+        hydroRegistryRepository.loadReadings(assetId),
+        hydroRegistryRepository.loadMaintenance(assetId),
+      ]);
+      setReadingsByAsset((current) => ({ ...current, [assetId]: readings }));
+      setMaintenanceByAsset((current) => ({ ...current, [assetId]: maintenance }));
     } catch {
       setSyncStatus('failed');
-      return false;
     }
   }, []);
 
-  const allRecords = useMemo(
-    () => categoryOrder.flatMap((category) => registry[category]),
-    [registry],
+  const createRecord = useCallback(async (category: AssetCategory, draft: HydroAssetDraft) => {
+    setSyncStatus('syncing');
+    try {
+      const asset = await hydroRegistryRepository.createAsset(category, draft);
+      setAssets((current) => [asset, ...current]);
+      setSyncStatus('idle');
+      return asset;
+    } catch (error) {
+      setSyncStatus('failed');
+      throw error;
+    }
+  }, []);
+
+  const updateRecord = useCallback(async (_category: AssetCategory, id: string, draft: HydroAssetDraft) => {
+    setSyncStatus('syncing');
+    try {
+      const asset = await hydroRegistryRepository.updateAsset(id, draft);
+      setAssets((current) => current.map((item) => (item.id === id ? asset : item)));
+      setSyncStatus('idle');
+      return asset;
+    } catch (error) {
+      setSyncStatus('failed');
+      throw error;
+    }
+  }, []);
+
+  const deleteRecord = useCallback(async (_category: AssetCategory, id: string) => {
+    setSyncStatus('syncing');
+    try {
+      await hydroRegistryRepository.deleteAsset(id);
+      setAssets((current) => current.filter((asset) => asset.id !== id));
+      setReadingsByAsset((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+      setMaintenanceByAsset((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+      setSyncStatus('idle');
+    } catch (error) {
+      setSyncStatus('failed');
+      throw error;
+    }
+  }, []);
+
+  const resetRegistry = useCallback(async () => {
+    setSyncStatus('syncing');
+    const loaded = await hydroRegistryRepository.resetLocal();
+    setAssets(loaded);
+    setReadingsByAsset({});
+    setMaintenanceByAsset({});
+    setSyncStatus('idle');
+  }, []);
+
+  const createReading = useCallback(async (assetId: string, draft: HydroAssetReadingDraft) => {
+    setSyncStatus('syncing');
+    try {
+      const reading = await hydroRegistryRepository.createReading(assetId, draft);
+      setReadingsByAsset((current) => ({
+        ...current,
+        [assetId]: [reading, ...(current[assetId] ?? [])],
+      }));
+      setAssets((current) =>
+        current.map((asset) =>
+          asset.id === assetId
+            ? {
+                ...asset,
+                flowRate: reading.flowRate ?? asset.flowRate,
+                lastReading: reading.readingAt,
+                reservoirLevel: reading.reservoirLevel ?? asset.reservoirLevel,
+                updatedAt: new Date().toISOString(),
+              }
+            : asset,
+        ),
+      );
+      setSyncStatus('idle');
+      return reading;
+    } catch (error) {
+      setSyncStatus('failed');
+      throw error;
+    }
+  }, []);
+
+  const createMaintenance = useCallback(async (assetId: string, draft: MaintenanceOrderDraft) => {
+    setSyncStatus('syncing');
+    try {
+      const order = await hydroRegistryRepository.createMaintenance(assetId, draft);
+      setMaintenanceByAsset((current) => ({
+        ...current,
+        [assetId]: [order, ...(current[assetId] ?? [])],
+      }));
+      setSyncStatus('idle');
+      return order;
+    } catch (error) {
+      setSyncStatus('failed');
+      throw error;
+    }
+  }, []);
+
+  const updateMaintenance = useCallback(async (assetId: string, orderId: string, draft: Partial<MaintenanceOrderDraft>) => {
+    setSyncStatus('syncing');
+    try {
+      const order = await hydroRegistryRepository.updateMaintenance(assetId, orderId, draft);
+      setMaintenanceByAsset((current) => ({
+        ...current,
+        [assetId]: (current[assetId] ?? []).map((item) => (item.id === orderId ? order : item)),
+      }));
+      setSyncStatus('idle');
+      return order;
+    } catch (error) {
+      setSyncStatus('failed');
+      throw error;
+    }
+  }, []);
+
+  const exportAssetsCsv = useCallback(
+    (filters?: Parameters<typeof hydroRegistryRepository.exportAssetsCsv>[0]) =>
+      hydroRegistryRepository.exportAssetsCsv(filters),
+    [],
   );
+
+  const registry = useMemo(() => (assets.length ? groupAssets(assets) : emptyRegistry()), [assets]);
 
   const value = useMemo(
     () => ({
-      registry,
-      allRecords,
+      allRecords: assets,
       backend: hydroRegistryRepository.backend,
-      syncStatus,
-      retrySync,
+      createMaintenance,
+      createReading,
       createRecord,
-      updateRecord,
       deleteRecord,
+      exportAssetsCsv,
+      isLoading,
+      loadAssetDetails,
+      maintenanceByAsset,
+      readingsByAsset,
+      registry,
+      reloadAssets,
       resetRegistry,
+      retrySync: reloadAssets,
+      syncStatus,
+      updateMaintenance,
+      updateRecord,
     }),
-    [allRecords, createRecord, deleteRecord, registry, resetRegistry, updateRecord],
+    [
+      assets,
+      createMaintenance,
+      createReading,
+      createRecord,
+      deleteRecord,
+      exportAssetsCsv,
+      isLoading,
+      loadAssetDetails,
+      maintenanceByAsset,
+      readingsByAsset,
+      registry,
+      reloadAssets,
+      resetRegistry,
+      syncStatus,
+      updateMaintenance,
+      updateRecord,
+    ],
   );
 
   return <HydroRegistryContext.Provider value={value}>{children}</HydroRegistryContext.Provider>;

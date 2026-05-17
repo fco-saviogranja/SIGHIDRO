@@ -1,43 +1,74 @@
 import { defaultHydroRegistry } from '../data';
-import { categoryOrder } from '../metadata';
-import type { HydroRegistry } from '../types';
+import { categoryMeta, categoryOrder } from '../metadata';
+import type {
+  AssetCategory,
+  InternalProfile,
+  HydroAsset,
+  HydroAssetDraft,
+  HydroAssetReading,
+  HydroAssetReadingDraft,
+  OperationalStatus,
+  MaintenanceOrder,
+  MaintenanceOrderDraft,
+} from '../types';
 import { buildApiUrl } from './apiClient';
 import { readAuthToken } from './authStorage';
 
-const STORAGE_KEY = 'sighidro:hydro-registry:v1';
+const STORAGE_KEY = 'sighidro:hydro-assets:v2';
+const READINGS_KEY = 'sighidro:hydro-readings:v2';
+const MAINTENANCE_KEY = 'sighidro:hydro-maintenance:v2';
+
+type AssetFilters = {
+  category?: AssetCategory | 'all';
+  location?: string;
+  q?: string;
+  responsible?: string;
+  status?: string;
+};
 
 export type HydroRegistryRepository = {
   backend: 'localStorage' | 'api';
-  load: () => Promise<HydroRegistry>;
-  // save returns true when remote sync succeeded, false otherwise
-  save: (registry: HydroRegistry) => Promise<boolean>;
+  createAsset: (category: AssetCategory, draft: HydroAssetDraft) => Promise<HydroAsset>;
+  createMaintenance: (assetId: string, draft: MaintenanceOrderDraft) => Promise<MaintenanceOrder>;
+  createReading: (assetId: string, draft: HydroAssetReadingDraft) => Promise<HydroAssetReading>;
+  deleteAsset: (id: string) => Promise<void>;
+  exportAssetsCsv: (filters?: AssetFilters) => Promise<string>;
+  loadAssets: (filters?: AssetFilters) => Promise<HydroAsset[]>;
+  loadMaintenance: (assetId: string) => Promise<MaintenanceOrder[]>;
+  loadReadings: (assetId: string) => Promise<HydroAssetReading[]>;
+  resetLocal: () => Promise<HydroAsset[]>;
+  updateAsset: (id: string, draft: Partial<HydroAssetDraft>) => Promise<HydroAsset>;
+  updateMaintenance: (assetId: string, orderId: string, draft: Partial<MaintenanceOrderDraft>) => Promise<MaintenanceOrder>;
 };
 
-const cloneDefaultRegistry = (): HydroRegistry => JSON.parse(JSON.stringify(defaultHydroRegistry)) as HydroRegistry;
+const cloneDefaultAssets = (): HydroAsset[] =>
+  categoryOrder.flatMap((category) => defaultHydroRegistry[category]).map((asset) => ({ ...asset }));
 
-const buildRegistryUrl = () => buildApiUrl('/api/registry');
-
-const buildAuthHeader = () => {
-  const token = readAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : null;
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
-
-const normalizeRegistryPayload = (payload: unknown): HydroRegistry | null => {
-  if (!isRecord(payload)) {
-    return null;
+const makeId = (prefix: string) => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
   }
 
-  const registryPayload =
-    (isRecord(payload.registry) && payload.registry) || (isRecord(payload.data) && payload.data) || payload;
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
 
-  return categoryOrder.reduce((registry, category) => {
-    const records = (registryPayload as Record<string, unknown>)[category];
-    registry[category] = Array.isArray(records) ? (records as HydroRegistry[typeof category]) : [];
+const toRegistry = (assets: HydroAsset[]) =>
+  categoryOrder.reduce((registry, category) => {
+    registry[category] = assets.filter((asset) => asset.category === category);
     return registry;
-  }, {} as HydroRegistry);
+  }, {} as Record<AssetCategory, HydroAsset[]>);
+
+const getNextCode = (category: AssetCategory, assets: HydroAsset[]) => {
+  const prefix = categoryMeta[category].prefix;
+  const nextNumber =
+    assets
+      .filter((asset) => asset.category === category)
+      .reduce((max, asset) => {
+        const current = Number(asset.code.replace(/\D/g, ''));
+        return Number.isFinite(current) ? Math.max(max, current) : max;
+      }, 0) + 1;
+
+  return `${prefix}-${String(nextNumber).padStart(3, '0')}`;
 };
 
 const readJsonPayload = async (response: Response) => {
@@ -53,100 +84,497 @@ const readJsonPayload = async (response: Response) => {
   }
 };
 
-export const localHydroRegistryRepository: HydroRegistryRepository = {
-  backend: 'localStorage',
-  async load() {
-    if (typeof window === 'undefined') {
-      return cloneDefaultRegistry();
+const buildAuthHeader = () => {
+  const token = readAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : null;
+};
+
+const normalizeAsset = (value: unknown): HydroAsset | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const asset = value as Partial<HydroAsset>;
+  if (!asset.id || !asset.code || !asset.category || !asset.name || !asset.location) {
+    return null;
+  }
+
+  return {
+    category: asset.category as AssetCategory,
+    code: asset.code,
+    createdAt: asset.createdAt ?? new Date().toISOString(),
+    flowRate: asset.flowRate,
+    capacityM3: asset.capacityM3,
+    depthMeters: asset.depthMeters,
+    energyType: asset.energyType,
+    id: asset.id,
+    lastReading: asset.lastReading ?? '',
+    latitude: asset.latitude,
+    location: asset.location,
+    longitude: asset.longitude,
+    name: asset.name,
+    notes: asset.notes ?? '',
+    powerHp: asset.powerHp,
+    reservoirLevel: asset.reservoirLevel,
+    responsible: (asset.responsible ?? 'Operador Hidráulico') as InternalProfile,
+    status: (asset.status ?? 'operando') as OperationalStatus,
+    updatedAt: asset.updatedAt ?? new Date().toISOString(),
+  };
+};
+
+const normalizeAssetsPayload = (payload: unknown): HydroAsset[] => {
+  const raw = payload && typeof payload === 'object' && 'data' in payload ? (payload as { data?: unknown }).data : payload;
+  if (Array.isArray(raw)) {
+    return raw.map(normalizeAsset).filter((asset): asset is HydroAsset => Boolean(asset));
+  }
+
+  if (raw && typeof raw === 'object') {
+    const registry = raw as Record<string, unknown>;
+    return categoryOrder.flatMap((category) =>
+      Array.isArray(registry[category])
+        ? (registry[category] as unknown[]).map(normalizeAsset).filter((asset): asset is HydroAsset => Boolean(asset))
+        : [],
+    );
+  }
+
+  return [];
+};
+
+const normalizeReading = (value: unknown): HydroAssetReading | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const reading = value as Partial<HydroAssetReading>;
+  if (!reading.id || !reading.assetId) {
+    return null;
+  }
+
+  return {
+    assetId: reading.assetId,
+    createdAt: reading.createdAt ?? new Date().toISOString(),
+    flowRate: reading.flowRate,
+    id: reading.id,
+    notes: reading.notes ?? '',
+    operatorName: reading.operatorName ?? '',
+    readingAt: reading.readingAt ?? new Date().toISOString(),
+    reservoirLevel: reading.reservoirLevel,
+  };
+};
+
+const normalizeMaintenance = (value: unknown): MaintenanceOrder | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const order = value as Partial<MaintenanceOrder>;
+  if (!order.id || !order.assetId || !order.service) {
+    return null;
+  }
+
+  return {
+    assetId: order.assetId,
+    createdAt: order.createdAt ?? new Date().toISOString(),
+    dueDate: order.dueDate,
+    id: order.id,
+    notes: order.notes ?? '',
+    responsible: order.responsible ?? 'Técnico de Campo',
+    service: order.service,
+    status: order.status ?? 'aberta',
+    updatedAt: order.updatedAt ?? new Date().toISOString(),
+  };
+};
+
+const applyFilters = (assets: HydroAsset[], filters: AssetFilters = {}) => {
+  const query = filters.q?.trim().toLowerCase();
+  const location = filters.location?.trim().toLowerCase();
+
+  return assets.filter((asset) => {
+    if (filters.category && filters.category !== 'all' && asset.category !== filters.category) {
+      return false;
     }
 
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      return cloneDefaultRegistry();
+    if (filters.status && filters.status !== 'all' && asset.status !== filters.status) {
+      return false;
     }
 
-    try {
-      const parsed = JSON.parse(stored) as Partial<HydroRegistry>;
-      return categoryOrder.reduce((registry, category) => {
-        registry[category] = Array.isArray(parsed[category]) ? parsed[category]! : [];
-        return registry;
-      }, {} as HydroRegistry);
-    } catch {
-      return cloneDefaultRegistry();
+    if (filters.responsible && filters.responsible !== 'all' && asset.responsible !== filters.responsible) {
+      return false;
     }
-  },
-  async save(registry) {
-    if (typeof window === 'undefined') {
+
+    if (location && !asset.location.toLowerCase().includes(location)) {
+      return false;
+    }
+
+    if (!query) {
       return true;
     }
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(registry));
-    return true;
+    return [asset.code, asset.name, asset.location, asset.responsible, asset.notes]
+      .filter(Boolean)
+      .some((value) => value.toLowerCase().includes(query));
+  });
+};
+
+const readStoredAssets = (): HydroAsset[] => {
+  if (typeof window === 'undefined') {
+    return cloneDefaultAssets();
+  }
+
+  const stored = window.localStorage.getItem(STORAGE_KEY);
+  if (!stored) {
+    const defaults = cloneDefaultAssets();
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
+    return defaults;
+  }
+
+  try {
+    const parsed = JSON.parse(stored) as unknown;
+    const assets = normalizeAssetsPayload(parsed);
+    return assets.length ? assets : cloneDefaultAssets();
+  } catch {
+    return cloneDefaultAssets();
+  }
+};
+
+const writeStoredAssets = (assets: HydroAsset[]) => {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(assets));
+    window.localStorage.setItem('sighidro:hydro-registry:v1', JSON.stringify(toRegistry(assets)));
+  }
+};
+
+const readStoredReadings = () => {
+  if (typeof window === 'undefined') {
+    return [] as HydroAssetReading[];
+  }
+
+  try {
+    return (JSON.parse(window.localStorage.getItem(READINGS_KEY) || '[]') as unknown[])
+      .map(normalizeReading)
+      .filter((reading): reading is HydroAssetReading => Boolean(reading));
+  } catch {
+    return [];
+  }
+};
+
+const writeStoredReadings = (readings: HydroAssetReading[]) => {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(READINGS_KEY, JSON.stringify(readings));
+  }
+};
+
+const readStoredMaintenance = () => {
+  if (typeof window === 'undefined') {
+    return [] as MaintenanceOrder[];
+  }
+
+  try {
+    return (JSON.parse(window.localStorage.getItem(MAINTENANCE_KEY) || '[]') as unknown[])
+      .map(normalizeMaintenance)
+      .filter((order): order is MaintenanceOrder => Boolean(order));
+  } catch {
+    return [];
+  }
+};
+
+const writeStoredMaintenance = (orders: MaintenanceOrder[]) => {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(MAINTENANCE_KEY, JSON.stringify(orders));
+  }
+};
+
+const buildQuery = (filters: AssetFilters = {}) => {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value && value !== 'all') {
+      params.set(key, value);
+    }
+  });
+
+  return params.toString();
+};
+
+const csvEscape = (value: unknown) => {
+  const text = value == null ? '' : String(value);
+  return /[",\n;]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+};
+
+const assetsToCsv = (assets: HydroAsset[]) => {
+  const headers = ['Codigo', 'Nome', 'Tipo', 'Localizacao', 'Status', 'Responsavel', 'Vazao', 'Nivel', 'Atualizado em'];
+  const rows = assets.map((asset) => [
+    asset.code,
+    asset.name,
+    categoryMeta[asset.category].label,
+    asset.location,
+    asset.status,
+    asset.responsible,
+    asset.flowRate ?? '',
+    asset.reservoirLevel ?? '',
+    asset.updatedAt,
+  ]);
+
+  return [headers, ...rows].map((row) => row.map(csvEscape).join(';')).join('\n');
+};
+
+export const localHydroRegistryRepository: HydroRegistryRepository = {
+  backend: 'localStorage',
+  async createAsset(category, draft) {
+    const assets = readStoredAssets();
+    const now = new Date().toISOString();
+    const asset: HydroAsset = {
+      ...draft,
+      category,
+      code: getNextCode(category, assets),
+      createdAt: now,
+      id: makeId('asset'),
+      updatedAt: now,
+    };
+    const next = [asset, ...assets];
+    writeStoredAssets(next);
+    return asset;
   },
+  async createMaintenance(assetId, draft) {
+    const now = new Date().toISOString();
+    const order: MaintenanceOrder = {
+      ...draft,
+      assetId,
+      createdAt: now,
+      id: makeId('maintenance'),
+      updatedAt: now,
+    };
+    writeStoredMaintenance([order, ...readStoredMaintenance()]);
+    return order;
+  },
+  async createReading(assetId, draft) {
+    const reading: HydroAssetReading = {
+      ...draft,
+      assetId,
+      createdAt: new Date().toISOString(),
+      id: makeId('reading'),
+    };
+    writeStoredReadings([reading, ...readStoredReadings()]);
+
+    const assets = readStoredAssets().map((asset) =>
+      asset.id === assetId
+        ? {
+            ...asset,
+            flowRate: reading.flowRate ?? asset.flowRate,
+            lastReading: reading.readingAt,
+            reservoirLevel: reading.reservoirLevel ?? asset.reservoirLevel,
+            updatedAt: new Date().toISOString(),
+          }
+        : asset,
+    );
+    writeStoredAssets(assets);
+    return reading;
+  },
+  async deleteAsset(id) {
+    writeStoredAssets(readStoredAssets().filter((asset) => asset.id !== id));
+    writeStoredReadings(readStoredReadings().filter((reading) => reading.assetId !== id));
+    writeStoredMaintenance(readStoredMaintenance().filter((order) => order.assetId !== id));
+  },
+  async exportAssetsCsv(filters) {
+    return assetsToCsv(applyFilters(readStoredAssets(), filters));
+  },
+  async loadAssets(filters) {
+    return applyFilters(readStoredAssets(), filters);
+  },
+  async loadMaintenance(assetId) {
+    return readStoredMaintenance().filter((order) => order.assetId === assetId);
+  },
+  async loadReadings(assetId) {
+    return readStoredReadings().filter((reading) => reading.assetId === assetId);
+  },
+  async resetLocal() {
+    const defaults = cloneDefaultAssets();
+    writeStoredAssets(defaults);
+    writeStoredReadings([]);
+    writeStoredMaintenance([]);
+    return defaults;
+  },
+  async updateAsset(id, draft) {
+    const now = new Date().toISOString();
+    let updated: HydroAsset | null = null;
+    const assets = readStoredAssets().map((asset) => {
+      if (asset.id !== id) {
+        return asset;
+      }
+
+      updated = {
+        ...asset,
+        ...draft,
+        id: asset.id,
+        code: asset.code,
+        category: asset.category,
+        createdAt: asset.createdAt,
+        updatedAt: now,
+      };
+      return updated;
+    });
+
+    if (!updated) {
+      throw new Error('Ativo não encontrado.');
+    }
+
+    writeStoredAssets(assets);
+    return updated;
+  },
+  async updateMaintenance(assetId, orderId, draft) {
+    const now = new Date().toISOString();
+    let updated: MaintenanceOrder | null = null;
+    const orders = readStoredMaintenance().map((order) => {
+      if (order.id !== orderId || order.assetId !== assetId) {
+        return order;
+      }
+
+      updated = {
+        ...order,
+        ...draft,
+        assetId: order.assetId,
+        createdAt: order.createdAt,
+        id: order.id,
+        updatedAt: now,
+      };
+      return updated;
+    });
+
+    if (!updated) {
+      throw new Error('Ordem de manutenção não encontrada.');
+    }
+
+    writeStoredMaintenance(orders);
+    return updated;
+  },
+};
+
+const apiRequest = async <T>(path: string, init: RequestInit = {}) => {
+  const authHeader = buildAuthHeader();
+  if (!authHeader) {
+    throw new Error('Sessão expirada. Faça login novamente.');
+  }
+
+  const response = await fetch(buildApiUrl(path), {
+    ...init,
+    headers: {
+      Accept: 'application/json',
+      ...authHeader,
+      ...init.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const payload = await readJsonPayload(response);
+    const message =
+      payload && typeof payload === 'object' && 'error' in payload
+        ? String((payload as { error?: string }).error)
+        : 'Falha ao comunicar com a API.';
+    throw new Error(message);
+  }
+
+  return (await readJsonPayload(response)) as T;
 };
 
 export const apiHydroRegistryRepository: HydroRegistryRepository = {
   backend: 'api',
-  async load() {
-    const authHeader = buildAuthHeader();
-    if (!authHeader || typeof window === 'undefined' || typeof fetch === 'undefined') {
-      return localHydroRegistryRepository.load();
+  async createAsset(category, draft) {
+    const payload = await apiRequest<{ data?: HydroAsset }>('/api/assets', {
+      body: JSON.stringify({ ...draft, category }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+    const asset = normalizeAsset(payload.data);
+    if (!asset) {
+      throw new Error('Resposta inválida da API.');
     }
-
-    try {
-      const response = await fetch(buildRegistryUrl(), {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          ...authHeader,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`API load failed with status ${response.status}`);
-      }
-
-      const payload = await readJsonPayload(response);
-      const registry = normalizeRegistryPayload(payload);
-      if (!registry) {
-        return localHydroRegistryRepository.load();
-      }
-
-      await localHydroRegistryRepository.save(registry);
-      return registry;
-    } catch {
-      return localHydroRegistryRepository.load();
-    }
+    return asset;
   },
-  async save(registry) {
-    // Always persist locally first
-    await localHydroRegistryRepository.save(registry);
-
+  async createMaintenance(assetId, draft) {
+    const payload = await apiRequest<{ data?: MaintenanceOrder }>(`/api/assets/${assetId}/maintenance`, {
+      body: JSON.stringify(draft),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+    const order = normalizeMaintenance(payload.data);
+    if (!order) {
+      throw new Error('Resposta inválida da API.');
+    }
+    return order;
+  },
+  async createReading(assetId, draft) {
+    const payload = await apiRequest<{ data?: HydroAssetReading }>(`/api/assets/${assetId}/readings`, {
+      body: JSON.stringify(draft),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+    const reading = normalizeReading(payload.data);
+    if (!reading) {
+      throw new Error('Resposta inválida da API.');
+    }
+    return reading;
+  },
+  async deleteAsset(id) {
+    await apiRequest(`/api/assets/${id}`, { method: 'DELETE' });
+  },
+  async exportAssetsCsv(filters) {
+    const query = buildQuery(filters);
     const authHeader = buildAuthHeader();
-    if (!authHeader || typeof window === 'undefined' || typeof fetch === 'undefined') {
-      // Auth not available or environment not suitable for network requests
-      return false;
+    if (!authHeader) {
+      throw new Error('Sessão expirada. Faça login novamente.');
     }
 
-    try {
-      const response = await fetch(buildRegistryUrl(), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          ...authHeader,
-        },
-        body: JSON.stringify(registry),
-      });
-
-      if (!response.ok) {
-        return false;
-      }
-
-      return true;
-    } catch {
-      return false;
+    const response = await fetch(buildApiUrl(`/api/assets/export.csv${query ? `?${query}` : ''}`), {
+      headers: authHeader,
+    });
+    if (!response.ok) {
+      throw new Error('Falha ao exportar CSV.');
     }
+
+    return response.text();
+  },
+  async loadAssets(filters) {
+    const query = buildQuery(filters);
+    const payload = await apiRequest<{ data?: unknown }>(`/api/assets${query ? `?${query}` : ''}`);
+    const assets = normalizeAssetsPayload(payload);
+    writeStoredAssets(assets);
+    return assets;
+  },
+  async loadMaintenance(assetId) {
+    const payload = await apiRequest<{ data?: unknown }>(`/api/assets/${assetId}/maintenance`);
+    const raw = Array.isArray(payload.data) ? payload.data : [];
+    return raw.map(normalizeMaintenance).filter((order): order is MaintenanceOrder => Boolean(order));
+  },
+  async loadReadings(assetId) {
+    const payload = await apiRequest<{ data?: unknown }>(`/api/assets/${assetId}/readings`);
+    const raw = Array.isArray(payload.data) ? payload.data : [];
+    return raw.map(normalizeReading).filter((reading): reading is HydroAssetReading => Boolean(reading));
+  },
+  async resetLocal() {
+    return this.loadAssets();
+  },
+  async updateAsset(id, draft) {
+    const payload = await apiRequest<{ data?: HydroAsset }>(`/api/assets/${id}`, {
+      body: JSON.stringify(draft),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+    });
+    const asset = normalizeAsset(payload.data);
+    if (!asset) {
+      throw new Error('Resposta inválida da API.');
+    }
+    return asset;
+  },
+  async updateMaintenance(assetId, orderId, draft) {
+    const payload = await apiRequest<{ data?: MaintenanceOrder }>(`/api/assets/${assetId}/maintenance`, {
+      body: JSON.stringify({ ...draft, id: orderId }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+    });
+    const order = normalizeMaintenance(payload.data);
+    if (!order) {
+      throw new Error('Resposta inválida da API.');
+    }
+    return order;
   },
 };
 

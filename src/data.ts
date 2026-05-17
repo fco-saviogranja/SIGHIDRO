@@ -1,5 +1,7 @@
 import type { Alert, ChartPoint, HydroRegistry, Maintenance } from './types';
 
+const defaultTimestamp = '2026-05-14T12:00:00.000Z';
+
 export const defaultHydroRegistry: HydroRegistry = {
   poço: [
     {
@@ -19,6 +21,8 @@ export const defaultHydroRegistry: HydroRegistry = {
       longitude: -39.3042,
       lastReading: '14/05/2026 09:20',
       notes: 'Queda de vazão em acompanhamento.',
+      createdAt: defaultTimestamp,
+      updatedAt: defaultTimestamp,
     },
     {
       id: 'well-serra-boa',
@@ -37,6 +41,8 @@ export const defaultHydroRegistry: HydroRegistry = {
       longitude: -39.2533,
       lastReading: '14/05/2026 08:55',
       notes: 'Operação estável.',
+      createdAt: defaultTimestamp,
+      updatedAt: defaultTimestamp,
     },
   ],
   bomba: [
@@ -55,6 +61,8 @@ export const defaultHydroRegistry: HydroRegistry = {
       longitude: -39.282,
       lastReading: '13/05/2026 17:40',
       notes: 'Troca de rolamento programada.',
+      createdAt: defaultTimestamp,
+      updatedAt: defaultTimestamp,
     },
   ],
   reservatório: [
@@ -73,6 +81,8 @@ export const defaultHydroRegistry: HydroRegistry = {
       longitude: -39.2684,
       lastReading: '14/05/2026 09:10',
       notes: 'Nível regular para a faixa operacional.',
+      createdAt: defaultTimestamp,
+      updatedAt: defaultTimestamp,
     },
   ],
   localidade: [
@@ -91,6 +101,8 @@ export const defaultHydroRegistry: HydroRegistry = {
       longitude: -39.2826,
       lastReading: '14/05/2026 09:05',
       notes: 'Zona com telemetria simulada ativa.',
+      createdAt: defaultTimestamp,
+      updatedAt: defaultTimestamp,
     },
   ],
 };
