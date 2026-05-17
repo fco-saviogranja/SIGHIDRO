@@ -6,6 +6,7 @@ import {
   readAuthEmail,
   readAuthRole,
   readAuthToken,
+  normalizeAuthRole,
   type AuthRole,
 } from './services/authStorage';
 
@@ -80,14 +81,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const payload = (await response.json()) as {
         token?: string;
-        user?: { email?: string; role?: AuthRole };
+        user?: { email?: string; role?: string };
       };
       if (!payload?.token) {
         throw new Error('Resposta invalida do servidor.');
       }
 
       const resolvedEmail = payload.user?.email ?? normalizedEmail;
-      const resolvedRole = (payload.user?.role as AuthRole) || 'técnico';
+      const resolvedRole = normalizeAuthRole(payload.user?.role) || 'técnico';
       persistAuth(payload.token, resolvedEmail, resolvedRole);
       setToken(payload.token);
       setUserEmail(resolvedEmail);

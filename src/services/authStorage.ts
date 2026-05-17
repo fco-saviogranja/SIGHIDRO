@@ -6,6 +6,14 @@ export type AuthRole = 'administrador' | 'gestor' | 'técnico';
 
 const canUseStorage = () => typeof window !== 'undefined' && Boolean(window.localStorage);
 
+export const normalizeAuthRole = (role?: string | null) => {
+  const value = String(role ?? '').trim().toLowerCase();
+  if (value === 'administrador' || value === 'admin') return 'administrador' as const;
+  if (value === 'gestor') return 'gestor' as const;
+  if (value === 'técnico' || value === 'tecnico' || value === 'operator' || value === 'operador') return 'técnico' as const;
+  return null;
+};
+
 export const readAuthToken = () => {
   if (!canUseStorage()) {
     return null;
@@ -27,8 +35,7 @@ export const readAuthRole = (): AuthRole | null => {
     return null;
   }
 
-  const role = window.localStorage.getItem(AUTH_ROLE_KEY);
-  return role === 'administrador' || role === 'gestor' || role === 'técnico' ? (role as AuthRole) : null;
+  return normalizeAuthRole(window.localStorage.getItem(AUTH_ROLE_KEY));
 };
 
 export const persistAuth = (token: string, email?: string, role: AuthRole = 'técnico') => {

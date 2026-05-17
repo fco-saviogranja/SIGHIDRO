@@ -64,6 +64,13 @@ app.use(cors({ origin: corsOrigin }));
 app.use(express.json({ limit: '2mb' }));
 
 const normalizeEmail = (email) => String(email ?? '').trim().toLowerCase();
+const normalizeRole = (role) => {
+  const value = String(role ?? '').trim().toLowerCase();
+  if (value === 'admin' || value === 'administrador') return 'administrador';
+  if (value === 'gestor') return 'gestor';
+  if (value === 'operator' || value === 'operador' || value === 'técnico' || value === 'tecnico') return 'técnico';
+  return 'técnico';
+};
 const nowIso = () => new Date().toISOString();
 const makeId = (prefix) => `${prefix}-${crypto.randomUUID()}`;
 
@@ -228,14 +235,24 @@ const ensureSchema = async () => {
       id text PRIMARY KEY,
       email text UNIQUE NOT NULL,
       password_hash text NOT NULL,
-      role text NOT NULL DEFAULT 'operator',
+      role text NOT NULL DEFAULT 'técnico',
       created_at timestamptz DEFAULT NOW()
     );
   `);
 
   await pool.query(`
     ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'operator';
+    ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'técnico';
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ALTER COLUMN role SET DEFAULT 'técnico';
+  `);
+
+  await pool.query(`
+    UPDATE users SET role = 'administrador' WHERE role = 'admin';
+    UPDATE users SET role = 'técnico' WHERE role IN ('operator', 'operador');
   `);
 
   await pool.query(`
@@ -331,12 +348,12 @@ const ensureAdminUser = async () => {
     const existing = inMemoryStore.users.get(email);
     if (existing) {
       existing.password_hash = passwordHash;
-      existing.role = 'admin';
+      existing.role = 'administrador';
       console.log(`Admin user ensured (in-memory): ${email}`);
       return;
     }
 
-    const user = { id: crypto.randomUUID(), email, password_hash: passwordHash, role: 'admin' };
+    const user = { id: crypto.randomUUID(), email, password_hash: passwordHash, role: 'administrador' };
     inMemoryStore.users.set(email, user);
     console.log(`Admin user created (in-memory): ${email}`);
     return;
@@ -345,7 +362,7 @@ const ensureAdminUser = async () => {
   const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
 
   if (existing.rows.length > 0) {
-    await pool.query('UPDATE users SET password_hash = $1, role = $2 WHERE email = $3', [passwordHash, 'admin', email]);
+    await pool.query('UPDATE users SET password_hash = $1, role = $2 WHERE email = $3', [passwordHash, 'administrador', email]);
     console.log(`Admin user ensured: ${email}`);
     return;
   }
@@ -354,7 +371,7 @@ const ensureAdminUser = async () => {
     crypto.randomUUID(),
     email,
     passwordHash,
-    'admin',
+    'administrador',
   ]);
   console.log(`Admin user created: ${email}`);
 };
@@ -380,7 +397,7 @@ const requireAuth = (req, res, next) => {
 
   try {
     const payload = jwt.verify(token, jwtSecret);
-    req.user = { id: payload.sub, email: payload.email, role: payload.role ?? 'operator' };
+    req.user = { id: payload.sub, email: payload.email, role: normalizeRole(payload.role ?? 'técnico') };
   } catch {
     return res.status(401).json({ error: 'Invalid token.' });
   }
@@ -550,7 +567,8 @@ app.post('/api/auth/register', async (req, res) => {
     if (useInMemoryDb) {
       if (inMemoryStore.users.has(normalizedEmail)) return res.status(409).json({ error: 'Email already registered.' });
       const passwordHash = await bcrypt.hash(password, 10);
-      const user = { id: crypto.randomUUID(), email: normalizedEmail, password_hash: passwordHash, role: 'operator' };
+      const role = normalizedEmail === normalizeEmail(process.env.ADMIN_EMAIL) ? 'administrador' : 'técnico';
+      const user = { id: crypto.randomUUID(), email: normalizedEmail, password_hash: passwordHash, role };
       inMemoryStore.users.set(normalizedEmail, user);
       return res.status(201).json({ user: { id: user.id, email: user.email, role: user.role } });
     }
@@ -559,7 +577,8 @@ app.post('/api/auth/register', async (req, res) => {
     if (existing.rows.length > 0) return res.status(409).json({ error: 'Email already registered.' });
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = { id: crypto.randomUUID(), email: normalizedEmail, role: 'operator' };
+    const role = normalizedEmail === normalizeEmail(process.env.ADMIN_EMAIL) ? 'administrador' : 'técnico';
+    const user = { id: crypto.randomUUID(), email: normalizedEmail, role };
     await pool.query('INSERT INTO users (id, email, password_hash, role) VALUES ($1, $2, $3, $4)', [
       user.id,
       user.email,
@@ -586,8 +605,9 @@ app.post('/api/auth/login', async (req, res) => {
       if (!user) return res.status(401).json({ error: 'Invalid credentials.' });
       const matches = await bcrypt.compare(password, user.password_hash);
       if (!matches) return res.status(401).json({ error: 'Invalid credentials.' });
-      const token = signToken({ id: user.id, email: user.email, role: user.role });
-      return res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+      const role = normalizeRole(user.role);
+      const token = signToken({ id: user.id, email: user.email, role });
+      return res.json({ token, user: { id: user.id, email: user.email, role } });
     }
 
     const result = await pool.query('SELECT id, email, password_hash, role FROM users WHERE email = $1', [normalizedEmail]);
@@ -597,8 +617,9 @@ app.post('/api/auth/login', async (req, res) => {
     const matches = await bcrypt.compare(password, user.password_hash);
     if (!matches) return res.status(401).json({ error: 'Invalid credentials.' });
 
-    const token = signToken({ id: user.id, email: user.email, role: user.role });
-    return res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+    const role = normalizeRole(user.role);
+    const token = signToken({ id: user.id, email: user.email, role });
+    return res.json({ token, user: { id: user.id, email: user.email, role } });
   } catch (error) {
     console.error('Login error', error);
     return res.status(500).json({ error: 'Unable to login.' });
