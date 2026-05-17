@@ -1248,6 +1248,270 @@
   font-weight: 800;
 }
 
+.maintenance-metrics-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.maintenance-tools {
+  grid-template-columns: minmax(280px, 1.2fr) repeat(3, minmax(150px, 0.7fr)) auto;
+  align-items: end;
+}
+
+.maintenance-clear-action {
+  align-self: end;
+}
+
+.maintenance-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(380px, 0.85fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.maintenance-queue-panel,
+.maintenance-work-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.maintenance-toolbar {
+  margin-top: -4px;
+}
+
+.maintenance-queue-list {
+  display: grid;
+  gap: 10px;
+}
+
+.maintenance-queue-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 82px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--blue);
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-align: left;
+  background: #fff;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.maintenance-queue-card:hover,
+.maintenance-queue-card.selected {
+  border-color: var(--line-strong);
+  background: #fbfcfd;
+  transform: translateY(-1px);
+}
+
+.maintenance-queue-card.selected {
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.maintenance-queue-card.priority-critical {
+  border-left-color: var(--red);
+}
+
+.maintenance-queue-card.priority-warning {
+  border-left-color: var(--amber);
+}
+
+.maintenance-queue-card.priority-planned {
+  border-left-color: var(--green);
+}
+
+.maintenance-queue-card.priority-critical.selected {
+  box-shadow: inset 3px 0 0 var(--red);
+}
+
+.maintenance-queue-card.priority-warning.selected {
+  box-shadow: inset 3px 0 0 var(--amber);
+}
+
+.maintenance-queue-card.priority-planned.selected {
+  box-shadow: inset 3px 0 0 var(--green);
+}
+
+.maintenance-card-icon {
+  display: inline-grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  background: var(--blue);
+}
+
+.priority-critical .maintenance-card-icon {
+  background: var(--red);
+}
+
+.priority-warning .maintenance-card-icon {
+  background: var(--amber);
+}
+
+.priority-planned .maintenance-card-icon {
+  background: var(--green);
+}
+
+.maintenance-card-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.maintenance-card-main strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 0.95rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.maintenance-card-main small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--legacy-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.maintenance-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+  max-width: 360px;
+}
+
+.maintenance-priority-badge,
+.maintenance-status-badge,
+.maintenance-due-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.maintenance-priority-badge.priority-critical,
+.maintenance-due-badge.due-critical {
+  color: var(--red);
+  background: rgba(143, 61, 61, 0.1);
+}
+
+.maintenance-priority-badge.priority-warning,
+.maintenance-due-badge.due-warning {
+  color: var(--amber);
+  background: rgba(184, 135, 36, 0.12);
+}
+
+.maintenance-priority-badge.priority-planned,
+.maintenance-due-badge.due-planned {
+  color: var(--green);
+  background: rgba(47, 104, 88, 0.11);
+}
+
+.maintenance-status-aberta {
+  color: var(--blue);
+  background: rgba(25, 58, 89, 0.1);
+}
+
+.maintenance-status-em_andamento {
+  color: var(--amber);
+  background: rgba(184, 135, 36, 0.12);
+}
+
+.maintenance-status-concluida {
+  color: var(--green);
+  background: rgba(47, 104, 88, 0.11);
+}
+
+.maintenance-status-cancelada {
+  color: var(--red);
+  background: rgba(143, 61, 61, 0.1);
+}
+
+.maintenance-asset-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fbfcfd;
+}
+
+.maintenance-asset-summary div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.maintenance-asset-summary strong {
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+.maintenance-asset-summary small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--legacy-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.maintenance-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.maintenance-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.maintenance-actions-row .secondary-action {
+  min-height: 40px;
+}
+
+.danger-action {
+  color: var(--red);
+}
+
+.maintenance-history-table article {
+  grid-template-columns: minmax(0, 1.2fr) auto auto minmax(0, 1fr);
+  min-height: 54px;
+}
+
+.maintenance-history-table .maintenance-status-badge,
+.maintenance-history-table .maintenance-due-badge {
+  justify-self: start;
+}
+
+.maintenance-checklist article {
+  min-height: 82px;
+}
+
 .module-route-icon {
   display: grid;
   width: 68px;
@@ -1761,6 +2025,7 @@
   }
 
   .metrics-grid,
+  .maintenance-metrics-grid,
   .monitor-metrics-grid,
   .modules-grid,
   .summary-strip {
@@ -1780,12 +2045,14 @@
   }
 
   .registry-layout,
+  .maintenance-layout,
   .monitoring-layout,
   .module-map-layout {
     grid-template-columns: 1fr;
   }
 
   .registry-tools,
+  .maintenance-tools,
   .registry-detail-grid {
     grid-template-columns: 1fr;
   }
@@ -1852,6 +2119,16 @@
     justify-content: flex-start;
   }
 
+  .maintenance-queue-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .maintenance-card-meta {
+    grid-column: 2;
+    justify-content: flex-start;
+    max-width: none;
+  }
+
   .filters-grid {
     grid-template-columns: 1fr;
   }
@@ -1912,14 +2189,20 @@
 
   .inline-form,
   .mini-table article,
+  .maintenance-history-table article,
   .maintenance-mini-table article {
     grid-template-columns: 1fr;
   }
 
   .form-actions,
+  .maintenance-actions-row,
   .auth-card .auth-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .maintenance-actions-row .secondary-action {
+    width: 100%;
   }
 
   .primary-action,
@@ -2849,6 +3132,10 @@
   color: #94a3b8;
 }
 
+.app-shell.dark .table-toolbar strong {
+  color: #f8fafc;
+}
+
 .app-shell.dark .hero-actions span,
 .app-shell.dark .sync-info,
 .app-shell.dark .kpi-trend,
@@ -3028,6 +3315,58 @@
 .app-shell.dark .monitoring-selected-card small,
 .app-shell.dark .monitoring-checklist span {
   color: #94a3b8;
+}
+
+.app-shell.dark .maintenance-queue-card,
+.app-shell.dark .maintenance-asset-summary,
+.app-shell.dark .maintenance-checklist article {
+  border-color: rgba(148, 163, 184, 0.18);
+  color: #e5eef7;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.app-shell.dark .maintenance-queue-card:hover,
+.app-shell.dark .maintenance-queue-card.selected {
+  border-color: rgba(103, 232, 249, 0.34);
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.app-shell.dark .maintenance-card-main strong,
+.app-shell.dark .maintenance-asset-summary strong,
+.app-shell.dark .maintenance-checklist strong {
+  color: #f8fafc;
+}
+
+.app-shell.dark .maintenance-card-main small,
+.app-shell.dark .maintenance-asset-summary small,
+.app-shell.dark .maintenance-checklist span {
+  color: #94a3b8;
+}
+
+.app-shell.dark .maintenance-priority-badge.priority-critical,
+.app-shell.dark .maintenance-due-badge.due-critical,
+.app-shell.dark .maintenance-status-cancelada {
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.26);
+}
+
+.app-shell.dark .maintenance-priority-badge.priority-warning,
+.app-shell.dark .maintenance-due-badge.due-warning,
+.app-shell.dark .maintenance-status-em_andamento {
+  color: #fde68a;
+  background: rgba(120, 53, 15, 0.28);
+}
+
+.app-shell.dark .maintenance-priority-badge.priority-planned,
+.app-shell.dark .maintenance-due-badge.due-planned,
+.app-shell.dark .maintenance-status-concluida {
+  color: #bbf7d0;
+  background: rgba(20, 83, 45, 0.28);
+}
+
+.app-shell.dark .maintenance-status-aberta {
+  color: #bfdbfe;
+  background: rgba(30, 64, 175, 0.28);
 }
 
 .app-shell.dark .monitoring-severity-critical {

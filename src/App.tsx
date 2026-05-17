@@ -15,6 +15,7 @@ const CadastroHidrico = lazy(() => import('./pages/CadastroHidrico'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const LoginPage = lazy(() => import('./pages/Login'));
+const Manutencao = lazy(() => import('./pages/Manutencao'));
 const ModulePage = lazy(() => import('./pages/ModulePage'));
 const Monitoramento = lazy(() => import('./pages/Monitoramento'));
 
@@ -55,7 +56,7 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="cadastro" element={<CadastroHidrico />} />
           <Route path="monitoramento" element={<Monitoramento />} />
-          <Route path="manutencao" element={<ModulePage variant="manutencao" />} />
+          <Route path="manutencao" element={<Manutencao />} />
           <Route path="mapa" element={<ModulePage variant="mapa" />} />
           <Route path="relatorios" element={<ModulePage variant="relatorios" />} />
         </Route>
