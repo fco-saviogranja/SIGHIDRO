@@ -10,6 +10,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "lint:css": "stylelint \"src/**/*.{css,scss}\" --allow-empty-input",
     "lint:css:fix": "stylelint --fix \"src/**/*.{css,scss}\" --allow-empty-input",
+    "lint:css:strict": "stylelint \"src/**/*.{css,scss}\" --config .stylelintrc.strict.cjs --allow-empty-input",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:e2e": "playwright test --project=chromium"
