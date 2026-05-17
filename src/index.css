@@ -1956,6 +1956,17 @@
   line-height: 1.55;
 }
 
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.report-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .auth-page {
   position: relative;
   min-height: 100vh;

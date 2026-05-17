@@ -176,18 +176,165 @@ function MapWorkspace({ records }: { records: HydroRecord[] }) {
 }
 
 function ReportsWorkspace({ records }: { records: HydroRecord[] }) {
+  const pendingRecords = records.filter((record) => record.status !== 'operando');
+
   return (
     <section className="reports-grid">
       <article className="panel report-card">
-        <PanelHeader title="Exportação futura" icon={<Download size={19} />} />
-        <p>Estrutura preparada para PDF, planilhas e prestação de contas com dados sincronizados via API.</p>
+        <PanelHeader title="Gerar relatório" icon={<Download size={19} />} />
+        <p>Baixe o resumo administrativo com indicadores, ativos cadastrados e situação operacional atual.</p>
+        <div className="report-actions">
+          <button className="primary-action" type="button" onClick={() => downloadReportHtml(records)}>
+            Baixar relatório
+          </button>
+          <button className="secondary-action" type="button" onClick={() => downloadRecordsCsv(records, 'sighidro-relatorio-ativos.csv')}>
+            Baixar CSV
+          </button>
+        </div>
       </article>
       <article className="panel report-card">
         <PanelHeader title="Auditoria operacional" icon={<AlertTriangle size={19} />} />
-        <p>{records.filter((record) => record.status !== 'operando').length} registro(s) exigem acompanhamento no cadastro atual.</p>
+        <p>{pendingRecords.length} registro(s) exigem acompanhamento no cadastro atual.</p>
+        <div className="report-actions">
+          <button
+            className="secondary-action"
+            type="button"
+            onClick={() => downloadRecordsCsv(pendingRecords, 'sighidro-auditoria-operacional.csv')}
+            disabled={!pendingRecords.length}
+          >
+            Baixar auditoria
+          </button>
+        </div>
       </article>
     </section>
   );
+}
+
+function downloadRecordsCsv(records: HydroRecord[], filename: string) {
+  const headers = ['Codigo', 'Nome', 'Tipo', 'Status', 'Localidade', 'Responsavel', 'Vazao', 'Nivel', 'Energia', 'Ultima medicao'];
+  const rows = records.map((record) => [
+    record.code,
+    record.name,
+    categoryMeta[record.category].label,
+    statusLabel[record.status],
+    record.location,
+    record.responsible,
+    record.flowRate ?? '',
+    resolveLevel(record),
+    record.energyType ?? '',
+    record.lastReading,
+  ]);
+
+  const csv = [headers, ...rows]
+    .map((row) => row.map((value) => csvCell(value)).join(';'))
+    .join('\n');
+
+  downloadTextFile(`\uFEFF${csv}`, filename, 'text/csv;charset=utf-8');
+}
+
+function downloadReportHtml(records: HydroRecord[]) {
+  const totalFlow = records.reduce((total, record) => total + Number(record.flowRate || 0), 0);
+  const pendingCount = records.filter((record) => record.status !== 'operando').length;
+  const generatedAt = new Date().toLocaleString('pt-BR');
+  const rows = records
+    .map(
+      (record) => `
+        <tr>
+          <td>${escapeHtml(record.code)}</td>
+          <td>${escapeHtml(record.name)}</td>
+          <td>${escapeHtml(categoryMeta[record.category].label)}</td>
+          <td>${escapeHtml(statusLabel[record.status])}</td>
+          <td>${escapeHtml(record.location)}</td>
+          <td>${escapeHtml(String(record.flowRate ?? '-'))}</td>
+          <td>${escapeHtml(String(resolveLevel(record) || '-'))}</td>
+          <td>${escapeHtml(record.lastReading)}</td>
+        </tr>
+      `,
+    )
+    .join('');
+
+  const html = `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Relatório SIGHIDRO</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 32px; color: #0f172a; }
+    h1 { margin: 0 0 8px; font-size: 26px; }
+    p { margin: 0 0 20px; color: #475569; }
+    .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 24px 0; }
+    .metric { border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; }
+    .metric span { display: block; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    .metric strong { display: block; margin-top: 8px; font-size: 22px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 12px; }
+    th { background: #f8fafc; color: #334155; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <h1>Relatório administrativo e operacional SIGHIDRO</h1>
+  <p>Gerado em ${escapeHtml(generatedAt)} a partir dos registros cadastrados.</p>
+  <section class="summary">
+    <div class="metric"><span>Ativos</span><strong>${records.length}</strong></div>
+    <div class="metric"><span>Ocorrências</span><strong>${pendingCount}</strong></div>
+    <div class="metric"><span>Vazão cadastrada</span><strong>${totalFlow} m³/h</strong></div>
+  </section>
+  <table>
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Nome</th>
+        <th>Tipo</th>
+        <th>Status</th>
+        <th>Localidade</th>
+        <th>Vazão</th>
+        <th>Nível</th>
+        <th>Última medição</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+</body>
+</html>`;
+
+  downloadTextFile(html, 'sighidro-relatorio-operacional.html', 'text/html;charset=utf-8');
+}
+
+function downloadTextFile(content: string, filename: string, type: string) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function resolveLevel(record: HydroRecord) {
+  if (typeof record.reservoirLevel === 'number') {
+    return `${record.reservoirLevel}%`;
+  }
+
+  if (typeof record.capacityM3 === 'number') {
+    return `${record.capacityM3} m³`;
+  }
+
+  return '';
+}
+
+function csvCell(value: string | number) {
+  return `"${String(value).replace(/"/g, '""')}"`;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 export default ModulePage;
