@@ -11,8 +11,11 @@ import {
   Waves,
   Wrench,
 } from 'lucide-react';
+import { useEffect } from 'react';
+import type { LatLngExpression } from 'leaflet';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet';
 import { useAuth } from '../AuthContext';
 
 const fadeUp = {
@@ -133,6 +136,22 @@ const sidebarItems = [
   'Mapa',
   'Configurações',
 ];
+
+const referenceMapPoints = [
+  { id: 'brejinho', label: 'POC-001', position: [-7.5748, -39.3042] as LatLngExpression, status: 'operando' },
+  { id: 'serra-boa', label: 'POC-014', position: [-7.6119, -39.2533] as LatLngExpression, status: 'operando' },
+  { id: 'centro', label: 'LOC-001', position: [-7.576, -39.2826] as LatLngExpression, status: 'operando' },
+  { id: 'sao-francisco', label: 'RES-003', position: [-7.5632, -39.2684] as LatLngExpression, status: 'atenção' },
+  { id: 'estacao-centro', label: 'BMB-012', position: [-7.5812, -39.282] as LatLngExpression, status: 'parado' },
+];
+
+const referenceMapLine = referenceMapPoints.map((point) => point.position);
+
+const referenceMapStatusColor: Record<string, string> = {
+  operando: '#27d66f',
+  atenção: '#f4c245',
+  parado: '#ef684d',
+};
 
 function LandingPage() {
   const { isAuthenticated } = useAuth();
@@ -281,21 +300,7 @@ function LandingPage() {
 
           <article className="reference-console-card reference-map-card">
             <span>Mapa operacional</span>
-            <div className="reference-map">
-              {['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'].map((marker, index) => (
-                <i
-                  className={`reference-map-dot dot-${marker} ${
-                    index === 3 || index === 7 ? 'warning' : index === 8 ? 'danger' : ''
-                  }`}
-                  key={marker}
-                />
-              ))}
-              <div className="reference-map-legend">
-                <span><i className="operando" />Operando</span>
-                <span><i className="atencao" />Atenção</span>
-                <span><i className="parado" />Parado</span>
-              </div>
-            </div>
+            <ReferenceMapPreview />
           </article>
         </div>
       </section>
@@ -333,10 +338,67 @@ function LandingPage() {
           <strong>SIGHIDRO - Sistema Integrado de Gestão Hídrica</strong>
           <span>SAAEJ • Município de Jardim • Gestão Hídrica Inteligente</span>
         </div>
-        <small>© 2024 SAAEJ. Todos os direitos reservados.</small>
+        <small>© 2026 SAAEJ. Todos os direitos reservados.</small>
       </footer>
     </main>
   );
+}
+
+function ReferenceMapPreview() {
+  return (
+    <div className="reference-map reference-real-map" aria-label="Mapa operacional demonstrativo">
+      <MapContainer
+        attributionControl
+        boxZoom={false}
+        center={[-7.584, -39.281]}
+        className="reference-leaflet-map"
+        doubleClickZoom={false}
+        dragging={false}
+        keyboard={false}
+        scrollWheelZoom={false}
+        touchZoom={false}
+        zoom={13}
+        zoomControl={false}
+      >
+        <ReferenceMapSizer />
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <Polyline pathOptions={{ color: '#1fe5ef', opacity: 0.78, weight: 4 }} positions={referenceMapLine} />
+        {referenceMapPoints.map((point) => (
+          <CircleMarker
+            center={point.position}
+            fillColor={referenceMapStatusColor[point.status]}
+            fillOpacity={0.96}
+            key={point.id}
+            pathOptions={{ color: '#021326', weight: 2 }}
+            radius={7}
+          >
+            <Tooltip direction="top" offset={[0, -8]} opacity={0.9}>
+              {point.label}
+            </Tooltip>
+          </CircleMarker>
+        ))}
+      </MapContainer>
+      <div className="reference-map-legend">
+        <span><i className="operando" />Operando</span>
+        <span><i className="atencao" />Atenção</span>
+        <span><i className="parado" />Parado</span>
+      </div>
+    </div>
+  );
+}
+
+function ReferenceMapSizer() {
+  const map = useMap();
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => map.invalidateSize());
+    return () => window.cancelAnimationFrame(frame);
+  }, [map]);
+
+  return null;
 }
 
 function IndicatorCard({

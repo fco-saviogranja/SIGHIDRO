@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { Navigate, NavLink, Outlet, Route, Routes } from 'react-router-dom';
 import { Bell, Menu, Moon, Settings, Sun, Users } from 'lucide-react';
 import { useAuth } from './AuthContext';
@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { Button } from './components/ui/button';
 import { UserManagementModal } from './components/UserManagementModal';
+import { loadSystemUsers, subscribeSystemUsers } from './services/userRepository';
 
 const CadastroHidrico = lazy(() => import('./pages/CadastroHidrico'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -82,6 +83,7 @@ function AppShell() {
 function Header() {
   const [activeDialog, setActiveDialog] = useState<'notifications' | 'settings' | 'user-management' | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [managedUsers, setManagedUsers] = useState(() => loadSystemUsers());
   const { isAuthenticated, userEmail, userRole, logout, canManageUsers } = useAuth();
   const { isDark, theme, toggleTheme } = useTheme();
   const roleLabel = 
@@ -92,7 +94,10 @@ function Header() {
       : userRole === 'técnico'
       ? 'Técnico'
       : userContext.role;
-  const displayName = userRole === 'administrador' ? 'Admin SIGHIDRO' : userContext.name;
+  const currentManagedUser = userEmail
+    ? managedUsers.find((user) => user.email === userEmail.trim().toLowerCase())
+    : null;
+  const displayName = currentManagedUser?.name ?? (userRole === 'administrador' ? 'Admin SIGHIDRO' : userContext.name);
   const ThemeIcon = isDark ? Sun : Moon;
   const iconButtonClass = isDark
     ? 'text-slate-300 hover:bg-white/10 hover:text-white'
@@ -102,6 +107,8 @@ function Header() {
   const shellPanelClass = isDark
     ? 'border-white/10 bg-[#07111f] text-slate-100'
     : 'border-slate-200 bg-white text-slate-950';
+
+  useEffect(() => subscribeSystemUsers(setManagedUsers), []);
 
   const renderNav = (className: string) => (
     <nav className={className} aria-label="Navegação principal">

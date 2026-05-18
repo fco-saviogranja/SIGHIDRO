@@ -18,14 +18,12 @@ import {
   SelectValue,
 } from './ui/select';
 import type { AuthRole } from '../services/authStorage';
-
-export type UserData = {
-  id: string;
-  email: string;
-  role: AuthRole;
-  name: string;
-  createdAt: string;
-};
+import {
+  createSystemUser,
+  loadSystemUsers,
+  saveSystemUsers,
+  type SystemUser,
+} from '../services/userRepository';
 
 type FormMode = 'add' | 'edit' | null;
 
@@ -35,6 +33,8 @@ type FormState = {
   name: string;
   role: AuthRole;
 };
+
+type FormErrors = Partial<Record<keyof FormState, string>>;
 
 const INITIAL_FORM_STATE: FormState = {
   email: '',
@@ -65,29 +65,24 @@ export function UserManagementModal({
   onOpenChange,
   userRole,
 }: UserManagementModalProps) {
-  const [users, setUsers] = useState<UserData[]>([
-    {
-      id: '1',
-      email: 'admin@sighidro.gov.br',
-      role: 'administrador',
-      name: 'Admin SIGHIDRO',
-      createdAt: new Date().toISOString(),
-    },
-  ]);
+  const [users, setUsers] = useState<SystemUser[]>(() => loadSystemUsers());
 
   const [formMode, setFormMode] = useState<FormMode>(null);
   const [formState, setFormState] = useState<FormState>(INITIAL_FORM_STATE);
-  const [errors, setErrors] = useState<Partial<FormState>>({});
+  const [errors, setErrors] = useState<FormErrors>({});
 
   const canManageUsers = userRole === 'administrador' || userRole === 'gestor';
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<FormState> = {};
+    const newErrors: FormErrors = {};
+    const normalizedEmail = formState.email.trim().toLowerCase();
 
-    if (!formState.email.trim()) {
+    if (!normalizedEmail) {
       newErrors.email = 'Email é obrigatório';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       newErrors.email = 'Email inválido';
+    } else if (users.some((user) => user.email === normalizedEmail && user.id !== formState.id)) {
+      newErrors.email = 'Já existe um usuário com este email';
     }
 
     if (!formState.name.trim()) {
@@ -98,13 +93,17 @@ export function UserManagementModal({
     return Object.keys(newErrors).length === 0;
   };
 
+  const persistUsers = (nextUsers: SystemUser[]) => {
+    setUsers(saveSystemUsers(nextUsers));
+  };
+
   const handleAddClick = () => {
     setFormState(INITIAL_FORM_STATE);
     setErrors({});
     setFormMode('add');
   };
 
-  const handleEditClick = (user: UserData) => {
+  const handleEditClick = (user: SystemUser) => {
     setFormState({
       id: user.id,
       email: user.email,
@@ -120,24 +119,37 @@ export function UserManagementModal({
       return;
     }
 
+    const normalizedEmail = formState.email.trim().toLowerCase();
+    const trimmedName = formState.name.trim();
+
     if (formMode === 'add') {
-      const newUser: UserData = {
-        id: String(Date.now()),
-        email: formState.email,
-        name: formState.name,
+      const newUser = createSystemUser({
+        email: normalizedEmail,
+        name: trimmedName,
         role: formState.role,
-        createdAt: new Date().toISOString(),
-      };
-      setUsers([...users, newUser]);
+      });
+      persistUsers([...users, newUser]);
     } else if (formMode === 'edit' && formState.id) {
-      setUsers(
+      const currentUser = users.find((user) => user.id === formState.id);
+      const isLastAdmin =
+        currentUser?.role === 'administrador' &&
+        formState.role !== 'administrador' &&
+        users.filter((user) => user.role === 'administrador').length === 1;
+
+      if (isLastAdmin) {
+        setErrors({ role: 'Mantenha pelo menos um administrador cadastrado' });
+        return;
+      }
+
+      persistUsers(
         users.map((user) =>
           user.id === formState.id
             ? {
                 ...user,
-                email: formState.email,
-                name: formState.name,
+                email: normalizedEmail,
+                name: trimmedName,
                 role: formState.role,
+                updatedAt: new Date().toISOString(),
               }
             : user
         )
@@ -149,8 +161,14 @@ export function UserManagementModal({
   };
 
   const handleDelete = (userId: string) => {
+    const user = users.find((item) => item.id === userId);
+    if (user?.role === 'administrador' && users.filter((item) => item.role === 'administrador').length === 1) {
+      alert('Mantenha pelo menos um administrador cadastrado.');
+      return;
+    }
+
     if (confirm('Tem certeza que deseja remover este usuário?')) {
-      setUsers(users.filter((user) => user.id !== userId));
+      persistUsers(users.filter((user) => user.id !== userId));
     }
   };
 
@@ -320,6 +338,11 @@ export function UserManagementModal({
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
                   {ROLE_DESCRIPTIONS[formState.role]}
                 </p>
+                {errors.role && (
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                    {errors.role}
+                  </p>
+                )}
               </div>
             </div>
 
