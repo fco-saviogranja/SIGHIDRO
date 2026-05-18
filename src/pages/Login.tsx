@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { Activity, ArrowRight, Database, Droplets, LockKeyhole, ShieldCheck, Signal } from 'lucide-react';
+import { Activity, ArrowRight, Database, LockKeyhole, ShieldCheck, Signal } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../AuthContext';
 
@@ -66,8 +66,8 @@ function LoginPage() {
           transition={{ duration: 0.36, ease: 'easeOut' }}
         >
           <div className="auth-brand">
-            <span className="brand-mark">
-              <Droplets size={28} />
+            <span className="brand-mark auth-logo-mark">
+              <img src="/logo.png" alt="" />
             </span>
             <div>
               <strong>SIGHIDRO</strong>

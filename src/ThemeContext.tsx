@@ -17,7 +17,7 @@ type ThemeContextValue = {
   toggleTheme: () => void;
 };
 
-const THEME_STORAGE_KEY = 'sighidro:theme';
+const THEME_STORAGE_KEY = 'sighidro:theme:v2';
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 

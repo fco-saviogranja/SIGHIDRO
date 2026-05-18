@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { Navigate, NavLink, Outlet, Route, Routes } from 'react-router-dom';
-import { Bell, Droplets, Menu, Moon, Settings, Sun, Users } from 'lucide-react';
+import { Bell, Menu, Moon, Settings, Sun, Users } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { HydroRegistryProvider } from './HydroRegistryContext';
 import { useTheme } from './ThemeContext';
@@ -146,11 +146,11 @@ function Header() {
         <div className="container flex h-16 max-w-screen-2xl items-center gap-7 px-4 md:px-8">
           <NavLink className="flex min-w-[150px] items-center gap-3 mr-3" to="/dashboard" aria-label="Ir para o dashboard">
             <div className="app-brand-mark">
-              <Droplets className="w-5 h-5" />
+              <img src="/logo.png" alt="" />
             </div>
             <div className="hidden md:flex flex-col">
               <span className={`text-base font-bold leading-none tracking-tight ${brandTextClass}`}>SIGHIDRO</span>
-              <span className={`mt-1 text-[11px] uppercase font-semibold leading-none tracking-normal ${brandSubtextClass}`}>ERP Hídrico</span>
+              <span className={`mt-1 text-[11px] uppercase font-semibold leading-none tracking-normal ${brandSubtextClass}`}>SAAEJ Jardim</span>
             </div>
           </NavLink>
 
@@ -200,10 +200,16 @@ function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setActiveDialog(canManageUsers ? 'user-management' : 'settings')}>
+                  <DropdownMenuItem onClick={() => setActiveDialog('settings')}>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Configurações</span>
                   </DropdownMenuItem>
+                  {canManageUsers ? (
+                    <DropdownMenuItem onClick={() => setActiveDialog('user-management')}>
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>Gerenciar usuários</span>
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={logout}
@@ -228,11 +234,11 @@ function Header() {
                 <div className="flex flex-col gap-6 py-4">
                   <div className="flex items-center gap-2">
                     <div className="app-brand-mark">
-                      <Droplets className="w-5 h-5" />
+                      <img src="/logo.png" alt="" />
                     </div>
                     <div>
                       <span className={`block text-base font-bold leading-none ${brandTextClass}`}>SIGHIDRO</span>
-                      <span className={`mt-1 block text-[11px] uppercase font-semibold leading-none ${brandSubtextClass}`}>ERP Hídrico</span>
+                      <span className={`mt-1 block text-[11px] uppercase font-semibold leading-none ${brandSubtextClass}`}>SAAEJ Jardim</span>
                     </div>
                   </div>
                   {renderNav('flex flex-col gap-2')}
