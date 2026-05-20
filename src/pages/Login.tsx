@@ -1,20 +1,8 @@
 import { FormEvent, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { Activity, ArrowRight, Database, LockKeyhole, ShieldCheck, Signal } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../AuthContext';
-
-const proofItems = [
-  { label: 'Cadastro hídrico', icon: Database },
-  { label: 'Monitoramento', icon: Activity },
-  { label: 'Auditoria', icon: ShieldCheck },
-];
-
-const accessSignals = [
-  { label: 'Sincronização', value: 'API' },
-  { label: 'Perfil', value: 'Admin' },
-  { label: 'Sessão', value: 'Local' },
-];
 
 const fadeUp = {
   hidden: { opacity: 0, y: 18 },
@@ -27,6 +15,7 @@ function LoginPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (isAuthenticated) {
@@ -65,54 +54,14 @@ function LoginPage() {
           variants={fadeUp}
           transition={{ duration: 0.36, ease: 'easeOut' }}
         >
-          <div className="auth-brand">
-            <span className="brand-mark auth-logo-mark">
-              <img src="/logo.png" alt="" />
-            </span>
-            <div>
-              <strong>SIGHIDRO</strong>
-              <small>SAAE de Jardim</small>
-            </div>
-          </div>
-
-          <div className="auth-intro-copy">
-            <span className="auth-eyebrow">Acesso seguro ao centro operacional</span>
-            <h1>Gestão hídrica municipal com controle operacional.</h1>
+          <div className="auth-brand-panel">
+            <img className="auth-brand-logo-large" src="/logo.png" alt="Logo SIGHIDRO" />
+            <strong>SIGHIDRO</strong>
+            <small>Sistema Integrado de Gestão Hídrica</small>
             <p>
-              Entre no ambiente institucional para acompanhar ativos, alertas, manutenção e
-              relatórios do abastecimento público.
+              Gestão hídrica municipal. Acesse para administrar, monitorar e otimizar os processos
+              do abastecimento público.
             </p>
-          </div>
-
-          <div className="auth-console" aria-hidden="true">
-            <div className="auth-console-header">
-              <span />
-              <strong>Sessão protegida</strong>
-            </div>
-            <div className="auth-console-grid">
-              {accessSignals.map((item) => (
-                <article key={item.label}>
-                  <strong>{item.value}</strong>
-                  <span>{item.label}</span>
-                </article>
-              ))}
-            </div>
-            <div className="auth-console-status">
-              <Signal size={16} />
-              Canal operacional estável
-            </div>
-          </div>
-
-          <div className="auth-proof">
-            {proofItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <span key={item.label}>
-                  <Icon size={15} />
-                  {item.label}
-                </span>
-              );
-            })}
           </div>
         </motion.div>
 
@@ -124,55 +73,88 @@ function LoginPage() {
           variants={fadeUp}
           transition={{ duration: 0.36, delay: 0.06, ease: 'easeOut' }}
         >
-          <div className="form-heading">
-            <span className="module-icon">
-              <LockKeyhole size={22} />
-            </span>
-            <div>
-              <h2>{mode === 'login' ? 'Acesso institucional' : 'Criar conta'}</h2>
-              <p>Autentique sua sessão para acessar o painel operacional do SIGHIDRO.</p>
+          <div className="auth-login-shell">
+            <img className="auth-login-mark" src="/logo.png" alt="" />
+            <div className="auth-login-card">
+              <div className="auth-login-heading">
+                <h2>{mode === 'login' ? 'Login de Acesso' : 'Criar conta'}</h2>
+                <p>
+                  {mode === 'login'
+                    ? 'Bem-vindo(a) de volta! Insira suas credenciais.'
+                    : 'Informe seus dados para criar uma sessão institucional.'}
+                </p>
+              </div>
+
+              <div className="auth-select-row">
+                <label>
+                  Estado
+                  <select defaultValue="ce">
+                    <option value="">Selecione um estado</option>
+                    <option value="ce">Ceará</option>
+                  </select>
+                </label>
+                <label>
+                  Município
+                  <select defaultValue="jardim">
+                    <option value="">Selecione primeiro</option>
+                    <option value="jardim">Jardim</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="auth-login-fields">
+                <label>
+                  E-mail ou Usuário
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="controleinterno@jardim.ce.gov.br"
+                  />
+                </label>
+                <label>
+                  Senha
+                  <span className="auth-password-field">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder={mode === 'login' ? 'Digite sua senha' : 'Crie uma senha segura'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((current) => !current)}
+                      aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </span>
+                </label>
+              </div>
+
+              <p className="auth-browser-note">
+                Após o login, o navegador poderá manter sua sessão salva neste dispositivo.
+              </p>
+
+              {error ? <p className="auth-error">{error}</p> : null}
+
+              <button className="auth-forgot" type="button">
+                Esqueci minha senha
+              </button>
+
+              <button className="primary-action auth-submit-button" type="submit" disabled={isBusy}>
+                {isBusy ? 'Processando...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
+                {!isBusy ? <ArrowRight size={17} /> : null}
+              </button>
+
+              <button className="auth-toggle" type="button" onClick={toggleMode}>
+                {mode === 'login' ? 'Criar conta' : 'Voltar para login'}
+              </button>
             </div>
           </div>
-
-          <div className="form-grid">
-            <label>
-              Email institucional
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="voce@saae.gov.br"
-              />
-            </label>
-            <label>
-              Senha
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder={mode === 'login' ? 'Digite sua senha' : 'Crie uma senha segura'}
-              />
-            </label>
-          </div>
-
-          {error ? <p className="auth-error">{error}</p> : null}
-
-          <div className="auth-actions">
-            <button className="primary-action" type="submit" disabled={isBusy}>
-              {isBusy ? 'Processando...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
-              {!isBusy ? <ArrowRight size={17} /> : null}
-            </button>
-            <button className="auth-toggle" type="button" onClick={toggleMode}>
-              {mode === 'login' ? 'Criar conta' : 'Voltar para login'}
-            </button>
-          </div>
-
-          <p className="auth-note">
-            O token de acesso fica salvo localmente para sincronizar o cadastro com o Render.
-          </p>
         </motion.form>
       </section>
     </main>
