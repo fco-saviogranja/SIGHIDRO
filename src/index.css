@@ -4469,13 +4469,17 @@ body:has(.reference-landing) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 132px;
+  width: auto;
+  min-width: 148px;
   min-height: 32px;
+  padding: 0 18px;
   border: 1px solid rgba(31, 229, 239, 0.25);
   border-radius: 5px;
   color: #f6ffff;
   font-size: 0.67rem;
   font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
   background: linear-gradient(135deg, #13c8bd, #0aa7c8);
   box-shadow: 0 10px 26px rgba(0, 184, 206, 0.18);
 }
@@ -5641,6 +5645,205 @@ body:has(.reference-landing) {
   .reference-footer small {
     font-size: 0.7rem;
     white-space: nowrap;
+  }
+}
+
+/* Fluid landing overrides for full-page layouts. */
+.reference-landing {
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  margin: 0;
+  box-shadow: none;
+}
+
+@media (min-width: 1181px) {
+  .reference-landing {
+    min-height: 100vh;
+  }
+
+  .reference-landing .landing-header {
+    padding-inline: clamp(28px, 4vw, 76px);
+  }
+
+  .reference-hero {
+    grid-template-columns: minmax(430px, 0.66fr) minmax(0, 1fr);
+    min-height: clamp(410px, 34vw, 540px);
+    padding: clamp(32px, 4vw, 70px) clamp(28px, 4vw, 76px) 0;
+  }
+
+  .reference-hero-media {
+    top: -96px;
+    width: 64%;
+  }
+
+  .reference-hero-copy {
+    max-width: min(640px, 47vw);
+  }
+
+  .reference-hero-copy h1 {
+    font-size: clamp(4.5rem, 6.3vw, 7.6rem);
+  }
+
+  .reference-hero-copy h2 {
+    font-size: clamp(1.55rem, 2vw, 2.25rem);
+  }
+
+  .reference-hero-copy p {
+    max-width: 560px;
+    font-size: clamp(1rem, 1.1vw, 1.22rem);
+  }
+
+  .reference-indicators,
+  .reference-modules {
+    width: calc(100% - clamp(40px, 7vw, 136px));
+  }
+
+  .reference-monitoring {
+    width: calc(100% - clamp(56px, 8vw, 160px));
+  }
+
+  .reference-indicators {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .reference-module-grid {
+    grid-template-columns: repeat(4, minmax(240px, 1fr));
+  }
+
+  .reference-console {
+    grid-template-columns: minmax(132px, 0.34fr) minmax(260px, 1.1fr) minmax(230px, 0.8fr) minmax(360px, 1.55fr);
+    height: auto;
+    min-height: 260px;
+  }
+
+  .reference-console-card {
+    min-height: 214px;
+  }
+
+  .reference-flow-chart,
+  .reference-map {
+    inset: 40px 16px 18px;
+  }
+
+  .reference-footer {
+    grid-template-columns: minmax(250px, 0.65fr) minmax(0, 1.5fr) minmax(260px, 0.7fr);
+    height: auto;
+    min-height: 96px;
+    padding-inline: clamp(32px, 4vw, 76px);
+  }
+}
+
+@media (max-width: 1180px) {
+  .reference-hero,
+  .reference-landing .landing-header {
+    padding-inline: clamp(18px, 4vw, 36px);
+  }
+
+  .reference-indicators,
+  .reference-modules,
+  .reference-monitoring {
+    width: calc(100% - clamp(28px, 6vw, 72px));
+  }
+
+  .reference-console {
+    height: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .reference-landing .landing-header {
+    align-items: center;
+    text-align: center;
+  }
+
+  .reference-landing .landing-brand {
+    justify-content: center;
+  }
+
+  .reference-landing .landing-nav {
+    justify-content: center;
+  }
+
+  .reference-hero {
+    padding-top: 30px;
+  }
+
+  .reference-hero-copy {
+    justify-items: center;
+    max-width: none;
+    text-align: center;
+  }
+
+  .reference-hero-actions {
+    width: 100%;
+  }
+
+  .reference-module-card {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .reference-module-card p {
+    min-height: 0;
+  }
+
+  .reference-governance-grid article {
+    border-left: 0;
+    border-top: 1px solid rgba(72, 210, 236, 0.28);
+  }
+
+  .reference-governance-grid article:first-child {
+    border-top: 0;
+  }
+}
+
+@media (max-width: 430px) {
+  .reference-landing .landing-brand {
+    flex-direction: column;
+  }
+
+  .reference-landing .landing-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .reference-landing .landing-nav a {
+    text-align: center;
+  }
+
+  .reference-landing .landing-nav a:first-child::after {
+    right: 50%;
+    bottom: -7px;
+    left: auto;
+    width: 42px;
+    transform: translateX(50%);
+  }
+
+  .reference-landing .landing-nav .landing-nav-cta {
+    grid-column: 1 / -1;
+  }
+
+  .reference-indicators,
+  .reference-modules,
+  .reference-monitoring {
+    width: calc(100% - 20px);
+  }
+
+  .reference-kpi-card {
+    grid-template-columns: 62px minmax(0, 1fr);
+    padding: 14px;
+  }
+
+  .reference-kpi-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .reference-console-card {
+    min-height: 190px;
   }
 }
 
