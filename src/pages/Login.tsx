@@ -85,23 +85,6 @@ function LoginPage() {
                 </p>
               </div>
 
-              <div className="auth-select-row">
-                <label>
-                  Estado
-                  <select defaultValue="ce">
-                    <option value="">Selecione um estado</option>
-                    <option value="ce">Ceará</option>
-                  </select>
-                </label>
-                <label>
-                  Município
-                  <select defaultValue="jardim">
-                    <option value="">Selecione primeiro</option>
-                    <option value="jardim">Jardim</option>
-                  </select>
-                </label>
-              </div>
-
               <div className="auth-login-fields">
                 <label>
                   E-mail ou Usuário

@@ -5988,15 +5988,9 @@ body:has(.reference-landing) {
   font-weight: 520;
 }
 
-.auth-select-row,
 .auth-login-fields {
   display: grid;
   gap: 14px;
-}
-
-.auth-select-row {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-bottom: 16px;
 }
 
 .auth-login-card label {
@@ -6007,8 +6001,7 @@ body:has(.reference-landing) {
   font-weight: 720;
 }
 
-.auth-login-card input,
-.auth-login-card select {
+.auth-login-card input {
   width: 100%;
   min-width: 0;
   min-height: 43px;
@@ -6023,8 +6016,7 @@ body:has(.reference-landing) {
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
-.auth-login-card input:focus,
-.auth-login-card select:focus {
+.auth-login-card input:focus {
   border-color: #0877d8;
   box-shadow: 0 0 0 3px rgba(8, 119, 216, 0.14);
 }
@@ -6180,9 +6172,6 @@ body:has(.reference-landing) {
     padding: 24px 20px;
   }
 
-  .auth-select-row {
-    grid-template-columns: 1fr;
-  }
 }
 
 
