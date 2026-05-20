@@ -5877,8 +5877,10 @@ body:has(.reference-landing) {
 
 .auth-page .auth-intro {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  justify-items: center;
   min-height: 100vh;
-  place-items: center;
   padding: clamp(28px, 6vw, 72px);
   overflow: hidden;
   border: 0;
@@ -5893,7 +5895,9 @@ body:has(.reference-landing) {
 .auth-brand-panel {
   display: grid;
   justify-items: center;
+  align-content: center;
   width: min(520px, 100%);
+  margin: 0 auto;
   text-align: center;
 }
 
