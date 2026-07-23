@@ -13,7 +13,6 @@ import { Link } from 'react-router-dom';
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useHydroRegistry } from '../HydroRegistryContext';
-import { flowSeries, productionSeries } from '../data';
 import { categoryMeta, statusLabel, systemModules } from '../metadata';
 import type { Alert, ChartPoint, HydroRecord, Indicator, Maintenance, OperationalStatus } from '../types';
 import { PanelHeader } from '../components/PanelHeader';
@@ -34,7 +33,7 @@ function MapFallback() {
 }
 
 function Dashboard() {
-  const { allRecords, registry, syncStatus, retrySync, backend, exportAssetsCsv } = useHydroRegistry();
+  const { allRecords, registry, syncStatus, retrySync, backend, exportAssetsCsv, flowSeries, maintenanceByAsset } = useHydroRegistry();
   const [appliedFilters, setAppliedFilters] = useState<AppliedDashboardFilters | null>(null);
   const shouldReduceMotion = useReducedMotion();
   const visibleRecords = useMemo(
@@ -45,14 +44,14 @@ function Dashboard() {
   );
   const indicators = useMemo(() => makeIndicators(registry), [registry]);
   const dashboardAlerts = useMemo(() => makeAlerts(allRecords), [allRecords]);
-  const maintenanceRows = useMemo(() => makeMaintenances(allRecords), [allRecords]);
+  const maintenanceRows = useMemo(() => makeMaintenances(allRecords, maintenanceByAsset), [allRecords, maintenanceByAsset]);
   const flowData = useMemo(
-    () => flowSeries.map((point) => ({ day: point.label, Vazao: point.value })),
-    [],
+    () => flowSeries.map((point) => ({ day: formatFlowDay(point.date), readings: point.readingCount, Vazao: point.value })),
+    [flowSeries],
   );
-  const productionData = useMemo(
-    () => productionSeries.map((point) => ({ month: point.label, Producao: point.value })),
-    [],
+  const reservoirData = useMemo(
+    () => registry.reservatório.map((record) => ({ label: record.code, value: Number(record.reservoirLevel || 0) })),
+    [registry.reservatório],
   );
 
   const exportDashboardCsv = async () => {
@@ -132,7 +131,7 @@ function Dashboard() {
 
       <section className="analytics-grid">
         <FlowChart data={flowData} />
-        <ProductionChart data={productionData} />
+        <ReservoirChart data={reservoirData} />
         <MaintenancePanel rows={maintenanceRows} />
       </section>
 
@@ -240,7 +239,7 @@ function makeAlerts(records: HydroRecord[]): Alert[] {
   return records
     .filter((record) => record.status !== 'operando')
     .slice(0, 3)
-    .map((record, index) => ({
+    .map((record) => ({
       id: `ALT-${record.id}`,
       title:
         record.status === 'parado'
@@ -250,23 +249,59 @@ function makeAlerts(records: HydroRecord[]): Alert[] {
             : 'Atenção operacional',
       source: record.name,
       severity: severityByStatus[record.status] ?? 'info',
-      time: index === 0 ? 'há 18 min' : index === 1 ? 'hoje' : 'há 2h',
+      time: formatRelativeUpdate(record.updatedAt),
     }));
 }
 
-function makeMaintenances(records: HydroRecord[]): Maintenance[] {
-  return records
-    .filter((record) => record.status === 'manutenção' || record.status === 'atenção')
-    .slice(0, 3)
-    .map((record, index) => ({
-      id: `OS-${record.id}`,
-      asset: record.name,
-      service: record.status === 'manutenção' ? 'Intervenção técnica' : 'Verificação operacional',
-      profile: record.responsible,
-      dueIn: index === 0 ? 'Hoje' : `${index + 2} dias`,
-      status: record.status,
+function makeMaintenances(
+  records: HydroRecord[],
+  maintenanceByAsset: ReturnType<typeof useHydroRegistry>['maintenanceByAsset'],
+): Maintenance[] {
+  const recordsById = new globalThis.Map(records.map((record) => [record.id, record]));
+
+  return Object.values(maintenanceByAsset)
+    .flat()
+    .filter((order) => order.status === 'aberta' || order.status === 'em_andamento')
+    .sort((left, right) => String(left.dueDate ?? '9999-12-31').localeCompare(String(right.dueDate ?? '9999-12-31')))
+    .map((order) => ({
+      asset: recordsById.get(order.assetId)?.name ?? 'Ativo removido',
+      dueIn: formatDueDate(order.dueDate),
+      id: order.id,
+      profile: order.responsible,
+      service: order.service,
+      status: order.status === 'em_andamento' ? 'manutenção' : 'atenção',
     }));
 }
+
+const formatFlowDay = (date: string) =>
+  new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Fortaleza' })
+    .format(new Date(`${date}T12:00:00-03:00`));
+
+const formatRelativeUpdate = (updatedAt: string) => {
+  const timestamp = new Date(updatedAt).getTime();
+  if (!Number.isFinite(timestamp)) return 'data não informada';
+  const elapsedMinutes = Math.max(0, Math.round((Date.now() - timestamp) / 60_000));
+  if (elapsedMinutes < 1) return 'agora';
+  if (elapsedMinutes < 60) return `há ${elapsedMinutes} min`;
+  const elapsedHours = Math.round(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `há ${elapsedHours}h`;
+  const elapsedDays = Math.round(elapsedHours / 24);
+  return `há ${elapsedDays} dia${elapsedDays === 1 ? '' : 's'}`;
+};
+
+const formatDueDate = (dueDate?: string) => {
+  if (!dueDate) return 'Sem prazo';
+  const today = new Date();
+  const todayKey = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const due = new Date(`${dueDate}T12:00:00`);
+  if (Number.isNaN(due.getTime())) return dueDate;
+  const dueKey = new Date(due.getFullYear(), due.getMonth(), due.getDate()).getTime();
+  const days = Math.round((dueKey - todayKey) / 86_400_000);
+  if (days < 0) return `${Math.abs(days)}d atrasada`;
+  if (days === 0) return 'Hoje';
+  if (days === 1) return 'Amanhã';
+  return `${days} dias`;
+};
 
 function KpiCard({ indicator }: { indicator: Indicator }) {
   const TrendIcon = indicator.trend === 'up' ? ArrowUpRight : indicator.trend === 'down' ? ArrowDownRight : CircleGauge;
@@ -345,33 +380,35 @@ function AlertRow({ alert }: { alert: Alert }) {
 }
 
 const flowValueFormatter = (value: number) => `${value} m³/h`;
-const productionValueFormatter = (value: number) => `${value}%`;
 
-function FlowChart({ data }: { data: Array<{ day: string; Vazao: number }> }) {
+function FlowChart({ data }: { data: Array<{ day: string; readings: number; Vazao: number }> }) {
   const points = data.map((point) => ({ label: point.day, value: point.Vazao }));
+  const lastPoint = data.at(-1);
 
   return (
     <section className="panel chart-panel">
       <PanelHeader title="Vazão hídrica diária" icon={<Waves size={19} />} actionTo="/monitoramento" actionLabel="Abrir monitoramento de vazão" />
-      <AreaSparkline points={points} />
+      {points.length ? <AreaSparkline points={points} /> : <EmptyState text="Carregando histórico de vazão..." />}
       <div className="chart-summary">
-        <strong>{flowValueFormatter(data.at(-1)?.Vazao ?? 0)}</strong>
-        <span>Última leitura consolidada</span>
+        <strong>{flowValueFormatter(lastPoint?.Vazao ?? 0)}</strong>
+        <span>{lastPoint?.readings ? `${lastPoint.readings} leitura(s) registrada(s) hoje` : 'Vazão atual consolidada dos ativos'}</span>
       </div>
     </section>
   );
 }
 
-function ProductionChart({ data }: { data: Array<{ month: string; Producao: number }> }) {
-  const points = data.map((point) => ({ label: point.month, value: point.Producao }));
+function ReservoirChart({ data }: { data: ChartPoint[] }) {
+  const average = data.length
+    ? Math.round(data.reduce((total, point) => total + point.value, 0) / data.length)
+    : 0;
 
   return (
     <section className="panel chart-panel">
-      <PanelHeader title="Produção total mensal" icon={<CircleGauge size={19} />} actionTo="/relatorios" actionLabel="Abrir relatórios" />
-      <BarVisualization points={points} />
+      <PanelHeader title="Nível dos reservatórios" icon={<CircleGauge size={19} />} actionTo="/monitoramento" actionLabel="Abrir monitoramento de níveis" />
+      {data.length ? <BarVisualization points={data} /> : <EmptyState text="Nenhum reservatório cadastrado." />}
       <div className="chart-summary">
-        <strong>{productionValueFormatter(data.at(-1)?.Producao ?? 0)}</strong>
-        <span>Produção acumulada no mês</span>
+        <strong>{average}%</strong>
+        <span>Média atual dos reservatórios cadastrados</span>
       </div>
     </section>
   );
@@ -428,11 +465,11 @@ function MaintenancePanel({ rows }: { rows: Maintenance[] }) {
     <section className="panel maintenance-panel">
       <PanelHeader title="Manutenção" icon={<Gauge size={19} />} actionTo="/manutencao" actionLabel="Abrir manutenção" />
       <div className="maintenance-list">
-        {rows.length ? rows.map((maintenance) => <MaintenanceRow key={maintenance.id} maintenance={maintenance} />) : <EmptyState text="Sem manutenção pendente." />}
+        {rows.length ? rows.slice(0, 3).map((maintenance) => <MaintenanceRow key={maintenance.id} maintenance={maintenance} />) : <EmptyState text="Sem ordens de manutenção pendentes." />}
       </div>
       <div className="repair-time">
-        <span>Tempo médio de reparo</span>
-        <strong>4.2h</strong>
+        <span>Ordens abertas ou em andamento</span>
+        <strong>{rows.length}</strong>
       </div>
     </section>
   );

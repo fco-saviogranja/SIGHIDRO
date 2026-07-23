@@ -731,12 +731,25 @@
 
 .search-field,
 .filter-field,
-.form-grid label {
+.form-grid label,
+.form-field {
   display: grid;
   gap: 8px;
   color: #4b525a;
   font-size: 0.76rem;
   font-weight: 800;
+}
+
+.form-field label {
+  color: inherit;
+  font: inherit;
+}
+
+.field-help {
+  color: var(--legacy-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .search-field input,
@@ -4098,9 +4111,14 @@
 .app-shell.dark .search-field,
 .app-shell.dark .filter-field,
 .app-shell.dark .form-grid label,
+.app-shell.dark .form-field,
 .app-shell.dark .inline-form label,
 .app-shell.dark .coordinate-picker-field {
   color: #cbd5e1;
+}
+
+.app-shell.dark .field-help {
+  color: #8fa2b9;
 }
 
 .app-shell.dark .search-field input,

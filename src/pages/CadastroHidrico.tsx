@@ -542,29 +542,37 @@ function CadastroHidrico() {
           </div>
 
           <div className="form-grid">
-            <label>
-              Nome
+            <div className="form-field">
+              <label htmlFor="asset-name">Nome</label>
               <input
+                id="asset-name"
+                aria-describedby="asset-name-help"
                 required
                 value={draft.name}
                 onChange={(event) => updateDraft('name', event.target.value)}
                 placeholder={`${activeMeta.label} principal`}
               />
-            </label>
+              <small className="field-help" id="asset-name-help">Identificação exibida nas listas, no mapa e nos relatórios.</small>
+            </div>
 
-            <label>
-              Localização / setor
+            <div className="form-field">
+              <label htmlFor="asset-location">Localização / setor</label>
               <input
+                id="asset-location"
+                aria-describedby="asset-location-help"
                 required
                 value={draft.location}
                 onChange={(event) => updateDraft('location', event.target.value)}
                 placeholder="Zona operacional"
               />
-            </label>
+              <small className="field-help" id="asset-location-help">Bairro, comunidade, estação ou zona onde o ativo está instalado.</small>
+            </div>
 
-            <label>
-              Status
+            <div className="form-field">
+              <label htmlFor="asset-status">Status</label>
               <select
+                id="asset-status"
+                aria-describedby="asset-status-help"
                 value={draft.status}
                 onChange={(event) => updateDraft('status', event.target.value as OperationalStatus)}
               >
@@ -574,11 +582,14 @@ function CadastroHidrico() {
                   </option>
                 ))}
               </select>
-            </label>
+              <small className="field-help" id="asset-status-help">Situação operacional usada nos alertas e painéis de acompanhamento.</small>
+            </div>
 
-            <label>
-              Responsável
+            <div className="form-field">
+              <label htmlFor="asset-responsible">Responsável</label>
               <select
+                id="asset-responsible"
+                aria-describedby="asset-responsible-help"
                 value={draft.responsible}
                 onChange={(event) => updateDraft('responsible', event.target.value as InternalProfile)}
               >
@@ -588,87 +599,112 @@ function CadastroHidrico() {
                   </option>
                 ))}
               </select>
-            </label>
+              <small className="field-help" id="asset-responsible-help">Perfil encarregado pela operação, inspeção ou gestão do ativo.</small>
+            </div>
 
-            <label>
-              Vazão atual (m³/h)
-              <input min="0" type="number" value={draft.flowRate} onChange={(event) => updateNumericDraft('flowRate', event.target.value)} />
-            </label>
+            <div className="form-field">
+              <label htmlFor="asset-flow-rate">Vazão atual (m³/h)</label>
+              <input id="asset-flow-rate" aria-describedby="asset-flow-rate-help" min="0" step="any" type="number" value={draft.flowRate} onChange={(event) => updateNumericDraft('flowRate', event.target.value)} />
+              <small className="field-help" id="asset-flow-rate-help">Volume de água movimentado por hora; alimenta os indicadores de vazão.</small>
+            </div>
 
             {activeCategory !== 'bomba' ? (
-              <label>
-                Nível / cobertura (%)
+              <div className="form-field">
+                <label htmlFor="asset-level">Nível / cobertura (%)</label>
                 <input
+                  id="asset-level"
+                  aria-describedby="asset-level-help"
                   min="0"
                   max="100"
                   type="number"
                   value={draft.reservoirLevel ?? ''}
                   onChange={(event) => updateNumericDraft('reservoirLevel', event.target.value)}
                 />
-              </label>
+                <small className="field-help" id="asset-level-help">
+                  {activeCategory === 'reservatório' ? 'Percentual estimado de água armazenada.' : activeCategory === 'localidade' ? 'Percentual de cobertura do atendimento na localidade.' : 'Percentual operacional informado na leitura do poço.'}
+                </small>
+              </div>
             ) : null}
 
             {activeCategory === 'bomba' || activeCategory === 'poço' ? (
-              <label>
-                Potência (HP)
-                <input min="0" type="number" value={draft.powerHp ?? ''} onChange={(event) => updateNumericDraft('powerHp', event.target.value)} />
-              </label>
+              <div className="form-field">
+                <label htmlFor="asset-power">Potência (HP)</label>
+                <input id="asset-power" aria-describedby="asset-power-help" min="0" step="any" type="number" value={draft.powerHp ?? ''} onChange={(event) => updateNumericDraft('powerHp', event.target.value)} />
+                <small className="field-help" id="asset-power-help">Potência nominal do motor ou conjunto de bombeamento, em cavalos-vapor.</small>
+              </div>
             ) : null}
 
             {activeCategory !== 'localidade' ? (
-              <label>
-                Tipo de energia
+              <div className="form-field">
+                <label htmlFor="asset-energy">Tipo de energia</label>
                 <input
+                  id="asset-energy"
+                  aria-describedby="asset-energy-help"
                   value={draft.energyType ?? ''}
                   onChange={(event) => updateDraft('energyType', event.target.value || undefined)}
                   placeholder="Solar, trifásica, rede elétrica"
                 />
-              </label>
+                <small className="field-help" id="asset-energy-help">Fonte ou padrão elétrico que alimenta o equipamento.</small>
+              </div>
             ) : null}
 
             {activeCategory === 'poço' ? (
-              <label>
-                Profundidade (m)
+              <div className="form-field">
+                <label htmlFor="asset-depth">Profundidade (m)</label>
                 <input
+                  id="asset-depth"
+                  aria-describedby="asset-depth-help"
                   min="0"
+                  step="any"
                   type="number"
                   value={draft.depthMeters ?? ''}
                   onChange={(event) => updateNumericDraft('depthMeters', event.target.value)}
                 />
-              </label>
+                <small className="field-help" id="asset-depth-help">Profundidade total perfurada do poço, medida em metros.</small>
+              </div>
             ) : null}
 
             {activeCategory === 'reservatório' || activeCategory === 'localidade' ? (
-              <label>
-                Capacidade (m³)
+              <div className="form-field">
+                <label htmlFor="asset-capacity">Capacidade (m³)</label>
                 <input
+                  id="asset-capacity"
+                  aria-describedby="asset-capacity-help"
                   min="0"
+                  step="any"
                   type="number"
                   value={draft.capacityM3 ?? ''}
                   onChange={(event) => updateNumericDraft('capacityM3', event.target.value)}
                 />
-              </label>
+                <small className="field-help" id="asset-capacity-help">Volume máximo de armazenamento ou atendimento, em metros cúbicos.</small>
+              </div>
             ) : null}
 
-            <label>
-              Latitude
+            <div className="form-field">
+              <label htmlFor="asset-latitude">Latitude</label>
               <input
+                id="asset-latitude"
+                aria-describedby="asset-latitude-help"
                 step="0.000001"
                 type="number"
                 value={draft.latitude ?? ''}
                 onChange={(event) => updateNumericDraft('latitude', event.target.value)}
               />
-            </label>
+              <small className="field-help" id="asset-latitude-help">Coordenada norte–sul em graus decimais; no Ceará normalmente é negativa.</small>
+            </div>
 
-            <label>
-              Longitude
+            <div className="form-field">
+              <label htmlFor="asset-longitude">Longitude</label>
               <input
+                id="asset-longitude"
+                aria-describedby="asset-longitude-help"
                 step="0.000001"
                 type="number"
                 value={draft.longitude ?? ''}
                 onChange={(event) => updateNumericDraft('longitude', event.target.value)}
               />
-            </label>
+              <small className="field-help" id="asset-longitude-help">Coordenada leste–oeste em graus decimais; no Brasil normalmente é negativa.</small>
+            </div>
 
             <div className="full-field coordinate-picker-field">
               <span>Localização geográfica</span>
@@ -678,20 +714,24 @@ function CadastroHidrico() {
               </Suspense>
             </div>
 
-            <label className="full-field">
-              Última medição
-              <input value={draft.lastReading} onChange={(event) => updateDraft('lastReading', event.target.value)} />
-            </label>
+            <div className="form-field full-field">
+              <label htmlFor="asset-last-reading">Última medição</label>
+              <input id="asset-last-reading" aria-describedby="asset-last-reading-help" value={draft.lastReading} onChange={(event) => updateDraft('lastReading', event.target.value)} />
+              <small className="field-help" id="asset-last-reading-help">Data e hora de referência da informação operacional mais recente.</small>
+            </div>
 
-            <label className="full-field">
-              Observações
+            <div className="form-field full-field">
+              <label htmlFor="asset-notes">Observações</label>
               <textarea
+                id="asset-notes"
+                aria-describedby="asset-notes-help"
                 rows={4}
                 value={draft.notes}
                 onChange={(event) => updateDraft('notes', event.target.value)}
                 placeholder="Histórico técnico, pendências, checklist ou condição operacional"
               />
-            </label>
+              <small className="field-help" id="asset-notes-help">Registre condições, pendências e informações úteis para a próxima equipe.</small>
+            </div>
           </div>
 
           <div className="form-actions">

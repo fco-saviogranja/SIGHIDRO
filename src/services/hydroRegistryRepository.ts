@@ -2,6 +2,7 @@ import { defaultHydroRegistry } from '../data';
 import { categoryMeta, categoryOrder } from '../metadata';
 import type {
   AssetCategory,
+  DailyFlowPoint,
   InternalProfile,
   HydroAsset,
   HydroAssetDraft,
@@ -17,6 +18,7 @@ import { readAuthToken } from './authStorage';
 const STORAGE_KEY = 'sighidro:hydro-assets:v2';
 const READINGS_KEY = 'sighidro:hydro-readings:v2';
 const MAINTENANCE_KEY = 'sighidro:hydro-maintenance:v2';
+const BUSINESS_TIME_ZONE = 'America/Fortaleza';
 
 type AssetFilters = {
   category?: AssetCategory | 'all';
@@ -33,7 +35,9 @@ export type HydroRegistryRepository = {
   createReading: (assetId: string, draft: HydroAssetReadingDraft) => Promise<HydroAssetReading>;
   deleteAsset: (id: string) => Promise<void>;
   exportAssetsCsv: (filters?: AssetFilters) => Promise<string>;
+  loadAllMaintenance: () => Promise<MaintenanceOrder[]>;
   loadAssets: (filters?: AssetFilters) => Promise<HydroAsset[]>;
+  loadFlowSeries: (days?: number) => Promise<DailyFlowPoint[]>;
   loadMaintenance: (assetId: string) => Promise<MaintenanceOrder[]>;
   loadReadings: (assetId: string) => Promise<HydroAssetReading[]>;
   resetLocal: () => Promise<HydroAsset[]>;
@@ -284,6 +288,86 @@ const writeStoredMaintenance = (orders: MaintenanceOrder[]) => {
   }
 };
 
+const dateKeyInBusinessTimeZone = (value = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: BUSINESS_TIME_ZONE,
+    year: 'numeric',
+  }).formatToParts(value);
+  const part = (type: 'day' | 'month' | 'year') => parts.find((item) => item.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
+};
+
+const shiftDateKey = (dateKey: string, amount: number) => {
+  const date = new Date(`${dateKey}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + amount);
+  return date.toISOString().slice(0, 10);
+};
+
+const buildLocalFlowSeries = (requestedDays = 7): DailyFlowPoint[] => {
+  const days = Math.min(Math.max(Math.trunc(requestedDays) || 7, 1), 31);
+  const today = dateKeyInBusinessTimeZone();
+  const dates = Array.from({ length: days }, (_, index) => shiftDateKey(today, index - days + 1));
+  const byDate = new Map(dates.map((date) => [date, { date, readingCount: 0, value: 0 }]));
+  const assets = readStoredAssets();
+  const assetsById = new Map(assets.map((asset) => [asset.id, asset]));
+  const dailyAssetValues = new Map<string, { count: number; date: string; sum: number }>();
+
+  readStoredReadings().forEach((reading) => {
+    const asset = assetsById.get(reading.assetId);
+    const flowRate = Number(reading.flowRate);
+    if (!asset || !['poço', 'reservatório'].includes(asset.category) || !Number.isFinite(flowRate)) return;
+
+    const readingDate = new Date(reading.readingAt);
+    if (Number.isNaN(readingDate.getTime())) return;
+    const date = dateKeyInBusinessTimeZone(readingDate);
+    if (!byDate.has(date)) return;
+
+    const key = `${date}:${reading.assetId}`;
+    const aggregate = dailyAssetValues.get(key) ?? { count: 0, date, sum: 0 };
+    aggregate.count += 1;
+    aggregate.sum += flowRate;
+    dailyAssetValues.set(key, aggregate);
+  });
+
+  dailyAssetValues.forEach((aggregate) => {
+    const point = byDate.get(aggregate.date);
+    if (!point) return;
+    point.value += aggregate.sum / aggregate.count;
+    point.readingCount += aggregate.count;
+  });
+
+  const currentPoint = byDate.get(today);
+  if (currentPoint) {
+    currentPoint.value = assets
+      .filter((asset) => asset.category === 'poço' || asset.category === 'reservatório')
+      .reduce((total, asset) => total + Number(asset.flowRate || 0), 0);
+  }
+
+  return dates.map((date) => {
+    const point = byDate.get(date) as DailyFlowPoint;
+    return { ...point, value: Math.round(point.value * 100) / 100 };
+  });
+};
+
+const normalizeFlowSeries = (value: unknown): DailyFlowPoint[] => {
+  const raw = value && typeof value === 'object' && 'data' in value ? (value as { data?: unknown }).data : value;
+  if (!Array.isArray(raw)) return [];
+
+  return raw.flatMap((item) => {
+    if (!item || typeof item !== 'object') return [];
+    const point = item as Partial<DailyFlowPoint>;
+    const value = Number(point.value);
+    if (!point.date || !Number.isFinite(value)) return [];
+    return [{
+      date: point.date,
+      readingCount: Math.max(0, Number(point.readingCount) || 0),
+      value,
+    }];
+  });
+};
+
 const buildQuery = (filters: AssetFilters = {}) => {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
@@ -377,8 +461,14 @@ export const localHydroRegistryRepository: HydroRegistryRepository = {
   async exportAssetsCsv(filters) {
     return assetsToCsv(applyFilters(readStoredAssets(), filters));
   },
+  async loadAllMaintenance() {
+    return readStoredMaintenance();
+  },
   async loadAssets(filters) {
     return applyFilters(readStoredAssets(), filters);
+  },
+  async loadFlowSeries(days = 7) {
+    return buildLocalFlowSeries(days);
   },
   async loadMaintenance(assetId) {
     return readStoredMaintenance().filter((order) => order.assetId === assetId);
@@ -532,12 +622,21 @@ export const apiHydroRegistryRepository: HydroRegistryRepository = {
 
     return response.text();
   },
+  async loadAllMaintenance() {
+    const payload = await apiRequest<{ data?: unknown }>('/api/maintenance');
+    const raw = Array.isArray(payload.data) ? payload.data : [];
+    return raw.map(normalizeMaintenance).filter((order): order is MaintenanceOrder => Boolean(order));
+  },
   async loadAssets(filters) {
     const query = buildQuery(filters);
     const payload = await apiRequest<{ data?: unknown }>(`/api/assets${query ? `?${query}` : ''}`);
     const assets = normalizeAssetsPayload(payload);
     writeStoredAssets(assets);
     return assets;
+  },
+  async loadFlowSeries(days = 7) {
+    const payload = await apiRequest<{ data?: unknown }>(`/api/dashboard/flow-series?days=${Math.min(Math.max(Math.trunc(days) || 7, 1), 31)}`);
+    return normalizeFlowSeries(payload);
   },
   async loadMaintenance(assetId) {
     const payload = await apiRequest<{ data?: unknown }>(`/api/assets/${assetId}/maintenance`);

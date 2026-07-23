@@ -11,7 +11,7 @@ import { lazy, Suspense, useMemo } from 'react';
 import { useHydroRegistry } from '../HydroRegistryContext';
 import { PanelHeader } from '../components/PanelHeader';
 import { categoryMeta, statusLabel } from '../metadata';
-import type { HydroRecord } from '../types';
+import type { HydroRecord, MaintenanceOrder } from '../types';
 
 const OperationalLeafletMap = lazy(() => import('../components/OperationalLeafletMap'));
 
@@ -33,8 +33,8 @@ const moduleConfig: Record<ModuleVariant, ModuleConfig> = {
   },
   manutencao: {
     eyebrow: 'Manutenção',
-    title: 'Triagem técnica dos ativos com pendência',
-    description: 'Fila operacional simulada para ativos em atenção, parados ou em manutenção.',
+    title: 'Ordens de serviço e acompanhamento técnico',
+    description: 'Fila operacional conectada às ordens registradas no cadastro hídrico.',
     icon: ClipboardList,
   },
   mapa: {
@@ -52,11 +52,18 @@ const moduleConfig: Record<ModuleVariant, ModuleConfig> = {
 };
 
 function ModulePage({ variant }: { variant: ModuleVariant }) {
-  const { allRecords } = useHydroRegistry();
+  const { allRecords, maintenanceByAsset } = useHydroRegistry();
   const config = moduleConfig[variant];
   const Icon = config.icon;
   const visibleRecords = useMemo(() => filterRecords(variant, allRecords), [allRecords, variant]);
-  const metrics = useMemo(() => makeModuleMetrics(variant, allRecords, visibleRecords), [allRecords, variant, visibleRecords]);
+  const maintenanceOrders = useMemo(
+    () => Object.values(maintenanceByAsset).flat().sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+    [maintenanceByAsset],
+  );
+  const metrics = useMemo(
+    () => makeModuleMetrics(variant, allRecords, visibleRecords, maintenanceOrders),
+    [allRecords, maintenanceOrders, variant, visibleRecords],
+  );
 
   return (
     <main className="dashboard route-page" id="main-content" tabIndex={-1}>
@@ -85,7 +92,10 @@ function ModulePage({ variant }: { variant: ModuleVariant }) {
       {variant === 'relatorios' ? <ReportsWorkspace records={allRecords} /> : null}
 
       <section className="panel table-panel module-table-panel">
-        <PanelHeader title={variant === 'manutencao' ? 'Fila operacional' : 'Registros conectados'} icon={<BarChart3 size={19} />} />
+        <PanelHeader title={variant === 'manutencao' ? 'Ordens de serviço' : 'Registros conectados'} icon={<BarChart3 size={19} />} />
+        {variant === 'manutencao' ? (
+          <MaintenanceOrdersTable orders={maintenanceOrders} records={allRecords} />
+        ) : (
         <div className="asset-table" role="table" aria-label="Registros conectados ao módulo">
           <div className="asset-row table-head" role="row">
             <span role="columnheader">Código</span>
@@ -110,20 +120,22 @@ function ModulePage({ variant }: { variant: ModuleVariant }) {
             </div>
           ))}
         </div>
+        )}
       </section>
     </main>
   );
 }
 
-function filterRecords(variant: ModuleVariant, records: HydroRecord[]) {
-  if (variant === 'manutencao') {
-    return records.filter((record) => record.status !== 'operando');
-  }
-
+function filterRecords(_variant: ModuleVariant, records: HydroRecord[]) {
   return records;
 }
 
-function makeModuleMetrics(variant: ModuleVariant, allRecords: HydroRecord[], visibleRecords: HydroRecord[]) {
+function makeModuleMetrics(
+  variant: ModuleVariant,
+  allRecords: HydroRecord[],
+  visibleRecords: HydroRecord[],
+  maintenanceOrders: MaintenanceOrder[],
+) {
   const totalFlow = visibleRecords.reduce((total, record) => total + Number(record.flowRate || 0), 0);
   const alertCount = allRecords.filter((record) => record.status !== 'operando').length;
   const averageLevelValues = allRecords
@@ -136,8 +148,20 @@ function makeModuleMetrics(variant: ModuleVariant, allRecords: HydroRecord[], vi
   if (variant === 'relatorios') {
     return [
       { label: 'Ativos no relatório', value: String(allRecords.length), detail: 'registros locais' },
-      { label: 'Ocorrências abertas', value: String(alertCount), detail: 'simuladas pelo status' },
+      { label: 'Ocorrências abertas', value: String(alertCount), detail: 'derivadas do status atual' },
       { label: 'Nível médio', value: `${averageLevel}%`, detail: 'reservatórios e zonas' },
+    ];
+  }
+
+  if (variant === 'manutencao') {
+    const today = new Date().toISOString().slice(0, 10);
+    const activeOrders = maintenanceOrders.filter((order) => order.status === 'aberta' || order.status === 'em_andamento');
+    const overdueOrders = activeOrders.filter((order) => order.dueDate && order.dueDate < today);
+    const completedOrders = maintenanceOrders.filter((order) => order.status === 'concluida');
+    return [
+      { label: 'Ordens ativas', value: String(activeOrders.length), detail: 'abertas ou em andamento' },
+      { label: 'Ordens atrasadas', value: String(overdueOrders.length), detail: 'prazo anterior a hoje' },
+      { label: 'Ordens concluídas', value: String(completedOrders.length), detail: 'histórico registrado' },
     ];
   }
 
@@ -146,6 +170,43 @@ function makeModuleMetrics(variant: ModuleVariant, allRecords: HydroRecord[], vi
     { label: 'Vazão monitorada', value: `${totalFlow} m³/h`, detail: 'somatório local' },
     { label: 'Pontos em alerta', value: String(alertCount), detail: 'atenção, parado ou manutenção' },
   ];
+}
+
+const maintenanceStatusLabels: Record<MaintenanceOrder['status'], string> = {
+  aberta: 'Aberta',
+  cancelada: 'Cancelada',
+  concluida: 'Concluída',
+  em_andamento: 'Em andamento',
+};
+
+function MaintenanceOrdersTable({ orders, records }: { orders: MaintenanceOrder[]; records: HydroRecord[] }) {
+  const recordsById = new globalThis.Map(records.map((record) => [record.id, record]));
+
+  return (
+    <div className="asset-table" role="table" aria-label="Ordens de manutenção registradas">
+      <div className="asset-row table-head" role="row">
+        <span role="columnheader">Ordem</span>
+        <span role="columnheader">Ativo</span>
+        <span role="columnheader">Serviço</span>
+        <span role="columnheader">Status</span>
+        <span role="columnheader">Responsável</span>
+        <span role="columnheader">Prazo</span>
+      </div>
+      {!orders.length ? <div className="empty-state" role="status">Nenhuma ordem de manutenção registrada.</div> : null}
+      {orders.map((order) => (
+        <div className="asset-row" key={order.id} role="row">
+          <span role="cell" data-label="Ordem">{order.id.slice(0, 12)}</span>
+          <strong role="cell" data-label="Ativo" data-card-title>{recordsById.get(order.assetId)?.name ?? 'Ativo removido'}</strong>
+          <span role="cell" data-label="Serviço">{order.service}</span>
+          <span role="cell" data-label="Status">{maintenanceStatusLabels[order.status]}</span>
+          <span role="cell" data-label="Responsável">{order.responsible}</span>
+          <span role="cell" data-label="Prazo">
+            {order.dueDate ? new Date(`${order.dueDate}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo'}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function MapWorkspace({ records }: { records: HydroRecord[] }) {

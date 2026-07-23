@@ -46,6 +46,9 @@ test('cadastro de poço persiste e aparece no dashboard', async ({ page }) => {
   await loginAsAdmin(page);
   await page.goto('/cadastro');
 
+  await expect(page.getByText('Identificação exibida nas listas, no mapa e nos relatórios.')).toBeVisible();
+  await expect(page.getByText('Volume de água movimentado por hora; alimenta os indicadores de vazão.')).toBeVisible();
+
   await createWell(page, { name: assetName, location: locationName });
 
   const registryRow = page.locator('.registry-table .registry-row').filter({ hasText: assetName });
@@ -75,6 +78,14 @@ test('cadastro registra leitura e manutenção vinculada ao ativo', async ({ pag
   await page.getByLabel('Operador', { exact: true }).fill('Operador E2E');
   await page.getByRole('button', { name: 'Registrar leitura' }).click();
   await expect(page.locator('.mini-table').filter({ hasText: '66 m³/h' })).toBeVisible();
+
+  await page.goto('/dashboard');
+  const flowPanel = page.locator('.chart-panel').filter({ hasText: 'Vazão hídrica diária' });
+  await expect(flowPanel).toContainText('293 m³/h');
+  await expect(flowPanel).toContainText('1 leitura(s) registrada(s) hoje');
+
+  await page.goto('/cadastro');
+  await page.locator('.registry-table .registry-row').filter({ hasText: assetName }).click();
 
   await page.getByLabel('Serviço').fill('Inspeção E2E');
   await page.getByRole('button', { name: 'Abrir OS' }).click();

@@ -19,12 +19,16 @@ O Cadastro Hídrico usa endpoints normalizados como fonte principal:
 - `GET /api/assets/:id/readings`: lista leituras do ativo.
 - `POST /api/assets/:id/readings`: registra leitura operacional.
 - `GET /api/assets/:id/maintenance`: lista ordens de manutenção do ativo.
+- `GET /api/maintenance`: lista todas as ordens para o painel e o módulo de manutenção.
 - `POST /api/assets/:id/maintenance`: abre ordem de manutenção.
 - `PATCH /api/assets/:id/maintenance`: atualiza ordem; envie `id` no corpo.
+- `GET /api/dashboard/flow-series?days=7`: consolida a vazão diária real em `America/Fortaleza`.
 - `GET /api/assets/export.csv`: exporta CSV com os filtros atuais.
 
 As tabelas principais são `hydro_assets`, `hydro_asset_readings`, `hydro_maintenance_orders` e `audit_log`.
 Todos os usuários autenticados podem editar; toda criação, alteração e exclusão grava auditoria com usuário, entidade e antes/depois.
+
+O frontend reconcilia ativos, vazão e manutenção após cada mutação, ao recuperar o foco, ao voltar a ficar visível, ao recuperar a conexão e a cada 60 segundos enquanto estiver aberto. A vazão do dia atual é a soma dos valores atuais de poços e reservatórios; os dias anteriores somam a média diária de cada ativo com leituras registradas.
 
 `/api/registry` permanece somente como compatibilidade para fluxos antigos.
 

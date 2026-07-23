@@ -11,6 +11,7 @@ import { categoryOrder } from './metadata';
 import { hydroRegistryRepository } from './services/hydroRegistryRepository';
 import type {
   AssetCategory,
+  DailyFlowPoint,
   HydroAsset,
   HydroAssetDraft,
   HydroAssetReading,
@@ -36,6 +37,7 @@ type HydroRegistryContextValue = {
     responsible?: string;
     status?: string;
   }) => Promise<string>;
+  flowSeries: DailyFlowPoint[];
   isLoading: boolean;
   loadAssetDetails: (assetId: string) => Promise<void>;
   maintenanceByAsset: Record<string, MaintenanceOrder[]>;
@@ -63,32 +65,70 @@ const groupAssets = (assets: HydroAsset[]): HydroRegistry =>
     return registry;
   }, {} as HydroRegistry);
 
+const groupMaintenance = (orders: MaintenanceOrder[]) =>
+  orders.reduce<Record<string, MaintenanceOrder[]>>((grouped, order) => {
+    grouped[order.assetId] = [...(grouped[order.assetId] ?? []), order];
+    return grouped;
+  }, {});
+
 export function HydroRegistryProvider({ children }: { children: ReactNode }) {
   const [assets, setAssets] = useState<HydroAsset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [flowSeries, setFlowSeries] = useState<DailyFlowPoint[]>([]);
   const [readingsByAsset, setReadingsByAsset] = useState<Record<string, HydroAssetReading[]>>({});
   const [maintenanceByAsset, setMaintenanceByAsset] = useState<Record<string, MaintenanceOrder[]>>({});
 
-  const reloadAssets = useCallback(async () => {
+  const loadOperationalData = useCallback(async (showLoading: boolean) => {
     setSyncStatus('syncing');
-    setIsLoading(true);
+    if (showLoading) setIsLoading(true);
     try {
-      const loaded = await hydroRegistryRepository.loadAssets();
-      setAssets(loaded);
-      setSyncStatus('idle');
-      return true;
+      const [assetsResult, flowResult, maintenanceResult] = await Promise.allSettled([
+        hydroRegistryRepository.loadAssets(),
+        hydroRegistryRepository.loadFlowSeries(),
+        hydroRegistryRepository.loadAllMaintenance(),
+      ]);
+      if (assetsResult.status === 'rejected') throw assetsResult.reason;
+
+      setAssets(assetsResult.value);
+      if (flowResult.status === 'fulfilled') setFlowSeries(flowResult.value);
+      if (maintenanceResult.status === 'fulfilled') setMaintenanceByAsset(groupMaintenance(maintenanceResult.value));
+
+      const fullySynchronized = flowResult.status === 'fulfilled' && maintenanceResult.status === 'fulfilled';
+      setSyncStatus(fullySynchronized ? 'idle' : 'failed');
+      return fullySynchronized;
     } catch {
       setSyncStatus(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'failed');
       return false;
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   }, []);
+
+  const reloadAssets = useCallback(() => loadOperationalData(true), [loadOperationalData]);
 
   useEffect(() => {
     void reloadAssets();
   }, [reloadAssets]);
+
+  useEffect(() => {
+    const refreshVisibleData = () => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        void loadOperationalData(false);
+      }
+    };
+    const intervalId = window.setInterval(refreshVisibleData, 60_000);
+    window.addEventListener('focus', refreshVisibleData);
+    window.addEventListener('online', refreshVisibleData);
+    document.addEventListener('visibilitychange', refreshVisibleData);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshVisibleData);
+      window.removeEventListener('online', refreshVisibleData);
+      document.removeEventListener('visibilitychange', refreshVisibleData);
+    };
+  }, [loadOperationalData]);
 
   const loadAssetDetails = useCallback(async (assetId: string) => {
     try {
@@ -108,26 +148,26 @@ export function HydroRegistryProvider({ children }: { children: ReactNode }) {
     try {
       const asset = await hydroRegistryRepository.createAsset(category, draft);
       setAssets((current) => [asset, ...current]);
-      setSyncStatus('idle');
+      await loadOperationalData(false);
       return asset;
     } catch (error) {
       setSyncStatus('failed');
       throw error;
     }
-  }, []);
+  }, [loadOperationalData]);
 
   const updateRecord = useCallback(async (_category: AssetCategory, id: string, draft: HydroAssetDraft) => {
     setSyncStatus('syncing');
     try {
       const asset = await hydroRegistryRepository.updateAsset(id, draft);
       setAssets((current) => current.map((item) => (item.id === id ? asset : item)));
-      setSyncStatus('idle');
+      await loadOperationalData(false);
       return asset;
     } catch (error) {
       setSyncStatus('failed');
       throw error;
     }
-  }, []);
+  }, [loadOperationalData]);
 
   const deleteRecord = useCallback(async (_category: AssetCategory, id: string) => {
     setSyncStatus('syncing');
@@ -144,12 +184,12 @@ export function HydroRegistryProvider({ children }: { children: ReactNode }) {
         delete next[id];
         return next;
       });
-      setSyncStatus('idle');
+      await loadOperationalData(false);
     } catch (error) {
       setSyncStatus('failed');
       throw error;
     }
-  }, []);
+  }, [loadOperationalData]);
 
   const resetRegistry = useCallback(async () => {
     setSyncStatus('syncing');
@@ -157,8 +197,8 @@ export function HydroRegistryProvider({ children }: { children: ReactNode }) {
     setAssets(loaded);
     setReadingsByAsset({});
     setMaintenanceByAsset({});
-    setSyncStatus('idle');
-  }, []);
+    await loadOperationalData(false);
+  }, [loadOperationalData]);
 
   const createReading = useCallback(async (assetId: string, draft: HydroAssetReadingDraft) => {
     setSyncStatus('syncing');
@@ -181,13 +221,13 @@ export function HydroRegistryProvider({ children }: { children: ReactNode }) {
             : asset,
         ),
       );
-      setSyncStatus('idle');
+      await loadOperationalData(false);
       return reading;
     } catch (error) {
       setSyncStatus('failed');
       throw error;
     }
-  }, []);
+  }, [loadOperationalData]);
 
   const createMaintenance = useCallback(async (assetId: string, draft: MaintenanceOrderDraft) => {
     setSyncStatus('syncing');
@@ -197,13 +237,13 @@ export function HydroRegistryProvider({ children }: { children: ReactNode }) {
         ...current,
         [assetId]: [order, ...(current[assetId] ?? [])],
       }));
-      setSyncStatus('idle');
+      await loadOperationalData(false);
       return order;
     } catch (error) {
       setSyncStatus('failed');
       throw error;
     }
-  }, []);
+  }, [loadOperationalData]);
 
   const updateMaintenance = useCallback(async (assetId: string, orderId: string, draft: Partial<MaintenanceOrderDraft>) => {
     setSyncStatus('syncing');
@@ -213,13 +253,13 @@ export function HydroRegistryProvider({ children }: { children: ReactNode }) {
         ...current,
         [assetId]: (current[assetId] ?? []).map((item) => (item.id === orderId ? order : item)),
       }));
-      setSyncStatus('idle');
+      await loadOperationalData(false);
       return order;
     } catch (error) {
       setSyncStatus('failed');
       throw error;
     }
-  }, []);
+  }, [loadOperationalData]);
 
   const exportAssetsCsv = useCallback(
     (filters?: Parameters<typeof hydroRegistryRepository.exportAssetsCsv>[0]) =>
@@ -238,6 +278,7 @@ export function HydroRegistryProvider({ children }: { children: ReactNode }) {
       createRecord,
       deleteRecord,
       exportAssetsCsv,
+      flowSeries,
       isLoading,
       loadAssetDetails,
       maintenanceByAsset,
@@ -257,6 +298,7 @@ export function HydroRegistryProvider({ children }: { children: ReactNode }) {
       createRecord,
       deleteRecord,
       exportAssetsCsv,
+      flowSeries,
       isLoading,
       loadAssetDetails,
       maintenanceByAsset,

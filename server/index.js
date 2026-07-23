@@ -50,6 +50,8 @@ const assetCategories = ['poço', 'bomba', 'reservatório', 'localidade'];
 const statusOptions = ['operando', 'atenção', 'parado', 'manutenção'];
 const profileOptions = ['Operador Hidráulico', 'Técnico de Campo', 'Gestor Hídrico', 'Administração Central'];
 const maintenanceStatuses = ['aberta', 'em_andamento', 'concluida', 'cancelada'];
+const flowAssetCategories = new Set(['poço', 'reservatório']);
+const businessTimeZone = process.env.BUSINESS_TIME_ZONE?.trim() || 'America/Fortaleza';
 const categoryPrefix = {
   poço: 'POC',
   bomba: 'BMB',
@@ -74,6 +76,66 @@ const normalizeRole = (role) => {
 };
 const nowIso = () => new Date().toISOString();
 const makeId = (prefix) => `${prefix}-${crypto.randomUUID()}`;
+
+const dateKeyInBusinessTimeZone = (value = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: businessTimeZone,
+    year: 'numeric',
+  }).formatToParts(value);
+  const part = (type) => parts.find((item) => item.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
+};
+
+const shiftDateKey = (dateKey, amount) => {
+  const date = new Date(`${dateKey}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + amount);
+  return date.toISOString().slice(0, 10);
+};
+
+const buildDailyFlowSeriesInMemory = (days) => {
+  const today = dateKeyInBusinessTimeZone();
+  const dates = Array.from({ length: days }, (_, index) => shiftDateKey(today, index - days + 1));
+  const byDate = new Map(dates.map((date) => [date, { date, readingCount: 0, value: 0 }]));
+  const assetsById = new Map(inMemoryStore.assets.map((asset) => [asset.id, asset]));
+  const dailyAssetValues = new Map();
+
+  for (const reading of inMemoryStore.readings) {
+    const asset = assetsById.get(reading.assetId);
+    const flowRate = Number(reading.flowRate);
+    if (!asset || !flowAssetCategories.has(asset.category) || !Number.isFinite(flowRate)) continue;
+
+    const readingDate = new Date(reading.readingAt);
+    if (Number.isNaN(readingDate.getTime())) continue;
+    const date = dateKeyInBusinessTimeZone(readingDate);
+    if (!byDate.has(date)) continue;
+
+    const key = `${date}:${reading.assetId}`;
+    const aggregate = dailyAssetValues.get(key) ?? { count: 0, date, sum: 0 };
+    aggregate.count += 1;
+    aggregate.sum += flowRate;
+    dailyAssetValues.set(key, aggregate);
+  }
+
+  for (const aggregate of dailyAssetValues.values()) {
+    const point = byDate.get(aggregate.date);
+    point.value += aggregate.sum / aggregate.count;
+    point.readingCount += aggregate.count;
+  }
+
+  const currentPoint = byDate.get(today);
+  if (currentPoint) {
+    currentPoint.value = inMemoryStore.assets
+      .filter((asset) => flowAssetCategories.has(asset.category))
+      .reduce((total, asset) => total + (Number(asset.flowRate) || 0), 0);
+  }
+
+  return dates.map((date) => {
+    const point = byDate.get(date);
+    return { ...point, value: Math.round(point.value * 100) / 100 };
+  });
+};
 
 const numberOrNull = (value) => {
   if (value === undefined || value === null || value === '') {
@@ -555,6 +617,97 @@ app.get('/api/health', (_req, res) => {
       configured: Boolean(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD),
     },
   });
+});
+
+app.get('/api/dashboard/flow-series', requireAuth, async (req, res) => {
+  try {
+    const requestedDays = Number(req.query.days ?? 7);
+    const days = Number.isInteger(requestedDays) ? Math.min(Math.max(requestedDays, 1), 31) : 7;
+
+    if (useInMemoryDb) {
+      return res.json({ data: buildDailyFlowSeriesInMemory(days), timeZone: businessTimeZone });
+    }
+
+    const result = await pool.query(
+      `
+      WITH dates AS (
+        SELECT generate_series(
+          (NOW() AT TIME ZONE $2)::date - ($1::integer - 1),
+          (NOW() AT TIME ZONE $2)::date,
+          interval '1 day'
+        )::date AS day
+      ),
+      daily_asset AS (
+        SELECT
+          (reading.reading_at AT TIME ZONE $2)::date AS day,
+          reading.asset_id,
+          AVG(reading.flow_rate) AS average_flow,
+          COUNT(reading.flow_rate)::integer AS reading_count
+        FROM hydro_asset_readings reading
+        INNER JOIN hydro_assets asset ON asset.id = reading.asset_id
+        WHERE reading.flow_rate IS NOT NULL
+          AND asset.category IN ('poço', 'reservatório')
+          AND (reading.reading_at AT TIME ZONE $2)::date >= (NOW() AT TIME ZONE $2)::date - ($1::integer - 1)
+        GROUP BY day, reading.asset_id
+      ),
+      daily_total AS (
+        SELECT
+          day,
+          SUM(average_flow) AS value,
+          SUM(reading_count)::integer AS reading_count
+        FROM daily_asset
+        GROUP BY day
+      ),
+      current_total AS (
+        SELECT COALESCE(SUM(flow_rate), 0) AS value
+        FROM hydro_assets
+        WHERE category IN ('poço', 'reservatório')
+      )
+      SELECT
+        TO_CHAR(dates.day, 'YYYY-MM-DD') AS date,
+        CASE
+          WHEN dates.day = (NOW() AT TIME ZONE $2)::date THEN current_total.value
+          ELSE COALESCE(daily_total.value, 0)
+        END AS value,
+        COALESCE(daily_total.reading_count, 0)::integer AS reading_count
+      FROM dates
+      CROSS JOIN current_total
+      LEFT JOIN daily_total ON daily_total.day = dates.day
+      ORDER BY dates.day ASC
+      `,
+      [days, businessTimeZone],
+    );
+
+    return res.json({
+      data: result.rows.map((row) => ({
+        date: row.date,
+        readingCount: Number(row.reading_count),
+        value: Math.round(Number(row.value) * 100) / 100,
+      })),
+      timeZone: businessTimeZone,
+    });
+  } catch (error) {
+    console.error('Dashboard flow series error', error);
+    return res.status(500).json({ error: 'Unable to load daily flow series.' });
+  }
+});
+
+app.get('/api/maintenance', requireAuth, async (_req, res) => {
+  try {
+    if (useInMemoryDb) {
+      return res.json({
+        data: [...inMemoryStore.maintenance].sort((left, right) =>
+          String(right.createdAt).localeCompare(String(left.createdAt)),
+        ),
+      });
+    }
+
+    const result = await pool.query('SELECT * FROM hydro_maintenance_orders ORDER BY created_at DESC');
+    return res.json({ data: result.rows.map(mapMaintenanceRow) });
+  } catch (error) {
+    console.error('List maintenance error', error);
+    return res.status(500).json({ error: 'Unable to list maintenance.' });
+  }
 });
 
 app.post('/api/auth/register', async (req, res) => {

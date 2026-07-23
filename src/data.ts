@@ -1,4 +1,4 @@
-import type { Alert, ChartPoint, HydroRegistry, Maintenance } from './types';
+import type { HydroRegistry } from './types';
 
 const defaultTimestamp = '2026-05-14T12:00:00.000Z';
 
@@ -106,73 +106,3 @@ export const defaultHydroRegistry: HydroRegistry = {
     },
   ],
 };
-
-export const alerts: Alert[] = [
-  {
-    id: 'ALT-001',
-    title: 'Queda de vazão acentuada',
-    source: 'Poço Brejinho',
-    severity: 'critical',
-    time: 'há 18 min',
-  },
-  {
-    id: 'ALT-002',
-    title: 'Manutenção vencida',
-    source: 'Bomba SP 17-10',
-    severity: 'warning',
-    time: 'hoje',
-  },
-  {
-    id: 'ALT-003',
-    title: 'Poço sem atualização',
-    source: 'São Francisco',
-    severity: 'warning',
-    time: 'há 2h',
-  },
-];
-
-export const maintenances: Maintenance[] = [
-  {
-    id: 'OS-2401',
-    asset: 'Bomba SP 17-10',
-    service: 'Troca de rolamento',
-    profile: 'Técnico de Campo',
-    dueIn: '1 dia',
-    status: 'manutenção',
-  },
-  {
-    id: 'OS-2402',
-    asset: 'Poço Brejinho',
-    service: 'Verificação de queda de vazão',
-    profile: 'Operador Hidráulico',
-    dueIn: 'Hoje',
-    status: 'atenção',
-  },
-  {
-    id: 'OS-2403',
-    asset: 'Reservatório São Francisco',
-    service: 'Inspeção preventiva',
-    profile: 'Gestor Hídrico',
-    dueIn: '5 dias',
-    status: 'operando',
-  },
-];
-
-export const flowSeries: ChartPoint[] = [
-  { label: 'Seg', value: 118 },
-  { label: 'Ter', value: 142 },
-  { label: 'Qua', value: 132 },
-  { label: 'Qui', value: 146 },
-  { label: 'Sex', value: 121 },
-  { label: 'Sáb', value: 154 },
-  { label: 'Dom', value: 139 },
-];
-
-export const productionSeries: ChartPoint[] = [
-  { label: 'Jan', value: 62 },
-  { label: 'Fev', value: 68 },
-  { label: 'Mar', value: 71 },
-  { label: 'Abr', value: 76 },
-  { label: 'Mai', value: 82 },
-  { label: 'Jun', value: 88 },
-];

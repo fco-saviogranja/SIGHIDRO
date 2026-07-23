@@ -131,3 +131,9 @@ export type ChartPoint = {
   label: string;
   value: number;
 };
+
+export type DailyFlowPoint = {
+  date: string;
+  readingCount: number;
+  value: number;
+};

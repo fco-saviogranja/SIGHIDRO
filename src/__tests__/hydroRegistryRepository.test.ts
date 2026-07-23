@@ -26,6 +26,35 @@ describe('localHydroRegistryRepository', () => {
     const afterCreate = await localHydroRegistryRepository.loadAssets({ q: 'Poço Teste' });
     expect(afterCreate).toHaveLength(1);
   });
+
+  it('builds the current daily flow from persisted readings and assets', async () => {
+    const asset = await localHydroRegistryRepository.createAsset('poço', {
+      flowRate: 10,
+      lastReading: 'agora',
+      location: 'Zona Teste',
+      name: 'Poço de vazão',
+      notes: '',
+      responsible: 'Operador Hidráulico',
+      status: 'operando',
+    });
+
+    await localHydroRegistryRepository.createReading(asset.id, {
+      flowRate: 25,
+      notes: 'Leitura atual',
+      operatorName: 'Operador Hidráulico',
+      readingAt: new Date().toISOString(),
+    });
+
+    const assets = await localHydroRegistryRepository.loadAssets();
+    const expectedCurrentFlow = assets
+      .filter((item) => item.category === 'poço' || item.category === 'reservatório')
+      .reduce((total, item) => total + Number(item.flowRate || 0), 0);
+    const series = await localHydroRegistryRepository.loadFlowSeries();
+
+    expect(series).toHaveLength(7);
+    expect(series.at(-1)?.value).toBe(expectedCurrentFlow);
+    expect(series.at(-1)?.readingCount).toBe(1);
+  });
 });
 
 describe('apiHydroRegistryRepository', () => {
