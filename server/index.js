@@ -21,7 +21,8 @@ const isProduction = process.env.NODE_ENV === 'production';
 const allowInMemoryDb =
   process.env.ALLOW_IN_MEMORY_DB === 'true' ||
   (!isProduction && process.env.ALLOW_IN_MEMORY_DB !== 'false');
-const databaseUrl = process.env.DATABASE_URL?.trim();
+const externalDatabaseUrl = process.env.EXTERNAL_DATABASE_URL?.trim();
+const databaseUrl = externalDatabaseUrl || process.env.DATABASE_URL?.trim();
 const jwtSecret = process.env.JWT_SECRET?.trim() || (isProduction ? '' : 'dev-only-sighidro-secret');
 
 if (!process.env.JWT_SECRET?.trim() && !isProduction) {
@@ -227,7 +228,7 @@ const normalizeMaintenancePayload = (payload, { partial = false } = {}) => {
 
 const ensureSchema = async () => {
   if (!pool) {
-    throw new Error('DATABASE_URL is not configured.');
+    throw new Error('EXTERNAL_DATABASE_URL or DATABASE_URL is not configured.');
   }
 
   await pool.query(`

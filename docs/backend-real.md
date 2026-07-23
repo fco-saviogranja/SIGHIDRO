@@ -39,6 +39,7 @@ O arquivo `render.yaml` define toda a infraestrutura principal:
 O Render cria automaticamente:
 
 - `DATABASE_URL`, vindo do banco `sighidro-db-202607`.
+- `EXTERNAL_DATABASE_URL`, segredo opcional para Neon ou outro PostgreSQL externo. Quando preenchido, tem prioridade sobre `DATABASE_URL`.
 - `JWT_SECRET`, gerado pelo blueprint.
 - Deploy da API em `https://sighidro-api.onrender.com`.
 - Deploy do frontend em `https://sighidro-web.onrender.com`.
@@ -47,11 +48,12 @@ Voce ainda precisa preencher manualmente no Render:
 
 ```env
 ADMIN_PASSWORD=<senha forte do usuario admin>
+EXTERNAL_DATABASE_URL=<conexao pooled do Neon, quando a migracao for ativada>
 ```
 
 Esse valor fica marcado como `sync: false`, entao nao entra no Git.
 
-> Importante: bancos PostgreSQL gratuitos do Render expiram 30 dias após a criação e são apagados depois do período de carência. A instância `sighidro-db-202607` é adequada apenas para restaurar temporariamente o serviço. Para produção contínua e com backups, migre-a para um plano pago antes de 21/08/2026.
+> Importante: bancos PostgreSQL gratuitos do Render expiram 30 dias após a criação e são apagados depois do período de carência. A instância `sighidro-db-202607` é adequada apenas para restaurar temporariamente o serviço. O caminho gratuito adotado é configurar o Neon em `EXTERNAL_DATABASE_URL` antes da expiração em 22/08/2026.
 
 Em producao, `ALLOW_IN_MEMORY_DB=false`. Se o Postgres falhar, o backend falha tambem. Isso evita operar com dados temporarios.
 
