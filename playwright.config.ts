@@ -5,6 +5,7 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 5000 },
   fullyParallel: false,
+  retries: process.env.CI ? 2 : 1,
   reporter: 'list',
   webServer: [
     {
@@ -28,5 +29,65 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'mobile-320',
+      testMatch: /responsive\.spec\.ts/,
+      use: {
+        browserName: 'chromium',
+        viewport: { width: 320, height: 568 },
+        deviceScaleFactor: 2,
+        hasTouch: true,
+        isMobile: true,
+      },
+    },
+    {
+      name: 'mobile-chromium',
+      testMatch: /responsive\.spec\.ts/,
+      use: { ...devices['Pixel 5'] },
+    },
+    {
+      name: 'mobile-360-short',
+      testMatch: /responsive\.spec\.ts/,
+      use: {
+        browserName: 'chromium',
+        viewport: { width: 360, height: 500 },
+        deviceScaleFactor: 2,
+        hasTouch: true,
+        isMobile: true,
+      },
+    },
+    {
+      name: 'tablet-chromium',
+      testMatch: /responsive\.spec\.ts/,
+      use: {
+        browserName: 'chromium',
+        viewport: { width: 768, height: 1024 },
+        deviceScaleFactor: 2,
+        hasTouch: true,
+        isMobile: true,
+      },
+    },
+    {
+      name: 'compact-tablet-600',
+      testMatch: /responsive\.spec\.ts/,
+      use: {
+        browserName: 'chromium',
+        viewport: { width: 600, height: 960 },
+        deviceScaleFactor: 1,
+        hasTouch: true,
+        isMobile: true,
+      },
+    },
+    {
+      name: 'mobile-landscape',
+      testMatch: /responsive\.spec\.ts/,
+      use: {
+        browserName: 'chromium',
+        viewport: { width: 844, height: 390 },
+        deviceScaleFactor: 2,
+        hasTouch: true,
+        isMobile: true,
+      },
+    },
   ],
 });

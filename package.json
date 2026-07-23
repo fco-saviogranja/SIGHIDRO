@@ -10,7 +10,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest",
     "test:watch": "vitest --watch",
-    "test:e2e": "playwright test --project=chromium"
+    "test:e2e": "playwright test",
+    "test:e2e:responsive": "playwright test e2e/responsive.spec.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

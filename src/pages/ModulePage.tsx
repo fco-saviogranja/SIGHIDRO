@@ -59,7 +59,7 @@ function ModulePage({ variant }: { variant: ModuleVariant }) {
   const metrics = useMemo(() => makeModuleMetrics(variant, allRecords, visibleRecords), [allRecords, variant, visibleRecords]);
 
   return (
-    <main className="dashboard route-page">
+    <main className="dashboard route-page" id="main-content" tabIndex={-1}>
       <section className="page-hero">
         <div>
           <span className="eyebrow">{config.eyebrow}</span>
@@ -88,24 +88,25 @@ function ModulePage({ variant }: { variant: ModuleVariant }) {
         <PanelHeader title={variant === 'manutencao' ? 'Fila operacional' : 'Registros conectados'} icon={<BarChart3 size={19} />} />
         <div className="asset-table" role="table" aria-label="Registros conectados ao módulo">
           <div className="asset-row table-head" role="row">
-            <span>Código</span>
-            <span>Nome</span>
-            <span>Tipo</span>
-            <span>Status</span>
-            <span>Vazão</span>
-            <span>Última medição</span>
+            <span role="columnheader">Código</span>
+            <span role="columnheader">Nome</span>
+            <span role="columnheader">Tipo</span>
+            <span role="columnheader">Status</span>
+            <span role="columnheader">Vazão</span>
+            <span role="columnheader">Última medição</span>
           </div>
+          {!visibleRecords.length ? <div className="empty-state" role="status">Nenhum registro disponível neste módulo.</div> : null}
           {visibleRecords.map((record) => (
             <div className="asset-row" key={record.id} role="row">
-              <span>{record.code}</span>
-              <strong>{record.name}</strong>
-              <span>{categoryMeta[record.category].label}</span>
-              <span>
+              <span role="cell" data-label="Código">{record.code}</span>
+              <strong role="cell" data-label="Nome" data-card-title>{record.name}</strong>
+              <span role="cell" data-label="Tipo">{categoryMeta[record.category].label}</span>
+              <span role="cell" data-label="Status">
                 <i className={`status-dot status-${record.status}`} />
                 {statusLabel[record.status]}
               </span>
-              <span>{record.flowRate} m³/h</span>
-              <span>{record.lastReading}</span>
+              <span role="cell" data-label="Vazão">{record.flowRate} m³/h</span>
+              <span role="cell" data-label="Última medição">{record.lastReading}</span>
             </div>
           ))}
         </div>

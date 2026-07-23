@@ -56,10 +56,17 @@ function CoordinatePickerCenter({ latitude, longitude }: Pick<CoordinatePickerMa
 function CoordinatePickerMap({ latitude, longitude, onChange }: CoordinatePickerMapProps) {
   const coordinates = getValidCoordinates(latitude, longitude);
   const center = coordinates ?? JARDIM_CENTER;
+  const hasCoarsePointer = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
   return (
     <div className="coordinate-picker-map">
-      <MapContainer center={center} zoom={14} scrollWheelZoom className="coordinate-picker-canvas">
+      <MapContainer
+        center={center}
+        zoom={14}
+        dragging={!hasCoarsePointer}
+        scrollWheelZoom={false}
+        className="coordinate-picker-canvas"
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -81,7 +88,7 @@ function CoordinatePickerMap({ latitude, longitude, onChange }: CoordinatePicker
         ) : null}
       </MapContainer>
       {coordinates ? (
-        <div className="coordinate-readout">
+        <div className="coordinate-readout" role="status" aria-live="polite">
           {coordinates[0].toFixed(6)}, {coordinates[1].toFixed(6)}
         </div>
       ) : null}

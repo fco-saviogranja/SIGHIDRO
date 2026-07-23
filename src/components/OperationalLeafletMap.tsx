@@ -70,6 +70,7 @@ function FitBounds({ records }: { records: MappedRecord[] }) {
 }
 
 function OperationalLeafletMap({ className = '', records }: OperationalLeafletMapProps) {
+  const hasCoarsePointer = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
   const mappedRecords = useMemo(
     () => records.map(resolveMappedRecord).filter((record): record is MappedRecord => Boolean(record)),
     [records],
@@ -89,7 +90,13 @@ function OperationalLeafletMap({ className = '', records }: OperationalLeafletMa
 
   return (
     <div className={`operational-leaflet-map ${className}`}>
-      <MapContainer center={JARDIM_CENTER} zoom={13} scrollWheelZoom className="operational-leaflet-canvas">
+      <MapContainer
+        center={JARDIM_CENTER}
+        zoom={13}
+        dragging={!hasCoarsePointer}
+        scrollWheelZoom={false}
+        className="operational-leaflet-canvas"
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

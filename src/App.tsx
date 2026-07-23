@@ -9,7 +9,7 @@ import { navItems, userContext } from './metadata';
 import { Avatar, AvatarFallback } from './components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './components/ui/dropdown-menu';
-import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './components/ui/sheet';
 import { Button } from './components/ui/button';
 import { UserManagementModal } from './components/UserManagementModal';
 import { loadSystemUsers, subscribeSystemUsers } from './services/userRepository';
@@ -72,6 +72,7 @@ function AppShell() {
 
   return (
     <div className={`app-shell ${theme}`}>
+      <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
       <Header />
       <PageSuspense>
         <Outlet />
@@ -150,8 +151,8 @@ function Header() {
             : 'border-slate-200/80 bg-white/90 shadow-sm supports-[backdrop-filter]:bg-white/80'
         }`}
       >
-        <div className="container flex h-16 max-w-screen-2xl items-center gap-7 px-4 md:px-8">
-          <NavLink className="flex min-w-[150px] items-center gap-3 mr-3" to="/dashboard" aria-label="Ir para o dashboard">
+        <div className="app-header-container container mx-auto flex h-16 max-w-screen-2xl items-center gap-7 px-4 md:px-8">
+          <NavLink className="app-header-brand flex min-w-[150px] items-center gap-3 mr-3" to="/dashboard" aria-label="Ir para o dashboard">
             <div className="app-brand-mark">
               <img src="/logo.png" alt="" />
             </div>
@@ -165,12 +166,12 @@ function Header() {
             {renderNav('flex items-center gap-1')}
           </div>
 
-          <div className="flex flex-1 items-center justify-end gap-2">
+          <div className="app-header-actions flex flex-1 items-center justify-end gap-2">
             
             <Button
               variant="ghost"
               size="icon"
-              className={iconButtonClass}
+              className={`header-desktop-action ${iconButtonClass}`}
               type="button"
               onClick={() => setActiveDialog('notifications')}
               aria-label="Abrir notificações"
@@ -181,7 +182,7 @@ function Header() {
             <Button
               variant="ghost"
               size="icon"
-              className={iconButtonClass}
+              className={`header-desktop-action ${iconButtonClass}`}
               type="button"
               onClick={toggleTheme}
               aria-label={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
@@ -193,7 +194,7 @@ function Header() {
 
             {isAuthenticated ? (
               <DropdownMenu>
-                <DropdownMenuTrigger render={<Button variant="ghost" aria-label="Abrir menu do usuário" className={`relative h-8 w-8 rounded-full ${isDark ? 'hover:bg-white/10' : 'hover:bg-slate-100'}`} />}>
+                <DropdownMenuTrigger render={<Button variant="ghost" aria-label="Abrir menu do usuário" className={`header-desktop-action relative h-8 w-8 rounded-full ${isDark ? 'hover:bg-white/10' : 'hover:bg-slate-100'}`} />}>
                     <Avatar className={`h-8 w-8 border shadow-sm ${isDark ? 'border-white/15' : 'border-slate-200'}`}>
                       <AvatarFallback className={`${isDark ? 'bg-white/10 text-slate-50' : 'bg-cyan-50 text-cyan-950'} font-semibold`}>{displayName.substring(0,2).toUpperCase()}</AvatarFallback>
                     </Avatar>
@@ -237,8 +238,12 @@ function Header() {
                   <Menu className="w-5 h-5" />
                   <span className="sr-only">Abrir menu</span>
               </SheetTrigger>
-              <SheetContent side="right" className={`w-[300px] sm:w-[400px] ${shellPanelClass}`}>
-                <div className="flex flex-col gap-6 py-4">
+              <SheetContent side="right" className={`app-mobile-sheet w-[300px] sm:w-[400px] ${shellPanelClass}`}>
+                <SheetHeader className="sr-only">
+                  <SheetTitle>Menu principal</SheetTitle>
+                  <SheetDescription>Navegação e opções da sessão do SIGHIDRO.</SheetDescription>
+                </SheetHeader>
+                <div className="flex flex-col gap-6 px-4 py-4">
                   <div className="flex items-center gap-2">
                     <div className="app-brand-mark">
                       <img src="/logo.png" alt="" />
@@ -249,6 +254,53 @@ function Header() {
                     </div>
                   </div>
                   {renderNav('flex flex-col gap-2')}
+                  {isAuthenticated ? (
+                    <div className={`grid gap-1 rounded-lg border p-3 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50'}`}>
+                      <strong className="text-sm">{displayName}</strong>
+                      <span className={`break-all text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{userEmail}</span>
+                      <span className={`text-xs ${isDark ? 'text-cyan-100/70' : 'text-cyan-800'}`}>{roleLabel}</span>
+                    </div>
+                  ) : null}
+                  <div className="grid gap-2">
+                    <Button
+                      variant="outline"
+                      type="button"
+                      className={`justify-start ${isDark ? 'border-white/10 bg-white/5 text-slate-100 hover:bg-white/10' : 'border-slate-200 bg-white text-slate-900 hover:bg-slate-50'}`}
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        setActiveDialog('notifications');
+                      }}
+                    >
+                      <Bell className="mr-2 h-4 w-4" />
+                      Notificações
+                    </Button>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      className={`justify-start ${isDark ? 'border-white/10 bg-white/5 text-slate-100 hover:bg-white/10' : 'border-slate-200 bg-white text-slate-900 hover:bg-slate-50'}`}
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        setActiveDialog('settings');
+                      }}
+                    >
+                      <Settings className="mr-2 h-4 w-4" />
+                      Configurações
+                    </Button>
+                    {canManageUsers ? (
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className={`justify-start ${isDark ? 'border-white/10 bg-white/5 text-slate-100 hover:bg-white/10' : 'border-slate-200 bg-white text-slate-900 hover:bg-slate-50'}`}
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          setActiveDialog('user-management');
+                        }}
+                      >
+                        <Users className="mr-2 h-4 w-4" />
+                        Gerenciar usuários
+                      </Button>
+                    ) : null}
+                  </div>
                   <Button
                     variant="outline"
                     type="button"
@@ -259,6 +311,19 @@ function Header() {
                     <ThemeIcon className="mr-2 h-4 w-4" />
                     {theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
                   </Button>
+                  {isAuthenticated ? (
+                    <Button
+                      variant="outline"
+                      type="button"
+                      className={isDark ? 'border-red-900/60 bg-red-950/20 text-red-300 hover:bg-red-950/40' : 'border-red-200 bg-white text-red-700 hover:bg-red-50'}
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        logout();
+                      }}
+                    >
+                      Sair da sessão
+                    </Button>
+                  ) : null}
                 </div>
               </SheetContent>
             </Sheet>

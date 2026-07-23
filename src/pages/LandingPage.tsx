@@ -6,14 +6,16 @@ import {
   Droplets,
   Gauge,
   LockKeyhole,
+  Menu,
   MapPin,
   ShieldCheck,
   Waves,
   Wrench,
+  X,
 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { LatLngExpression } from 'leaflet';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet';
 import { useAuth } from '../AuthContext';
@@ -155,6 +157,8 @@ const referenceMapStatusColor: Record<string, string> = {
 
 function LandingPage() {
   const { isAuthenticated } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
   const appHref = isAuthenticated ? '/dashboard' : '/login';
 
   return (
@@ -168,13 +172,28 @@ function LandingPage() {
           </div>
         </Link>
 
-        <nav className="landing-nav" aria-label="Navegação pública">
+        <button
+          className="landing-menu-button"
+          type="button"
+          aria-label={isMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+          aria-expanded={isMenuOpen}
+          aria-controls="landing-navigation"
+          onClick={() => setIsMenuOpen((current) => !current)}
+        >
+          {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+
+        <nav
+          id="landing-navigation"
+          className={isMenuOpen ? 'landing-nav open' : 'landing-nav'}
+          aria-label="Navegação pública"
+        >
           {navLinks.map((item) => (
-            <a key={item.href} href={item.href}>
+            <a key={item.href} href={item.href} onClick={() => setIsMenuOpen(false)}>
               {item.label}
             </a>
           ))}
-          <Link className="landing-nav-cta" to={appHref}>
+          <Link className="landing-nav-cta" to={appHref} onClick={() => setIsMenuOpen(false)}>
             Acessar Sistema
           </Link>
         </nav>
@@ -203,7 +222,7 @@ function LandingPage() {
           </div>
         </div>
 
-        <motion.div className="reference-hero-copy" initial="hidden" animate="show" variants={stagger}>
+        <motion.div className="reference-hero-copy" initial={shouldReduceMotion ? false : 'hidden'} animate="show" variants={stagger}>
           <motion.h1 variants={fadeUp}>SIGHIDRO</motion.h1>
           <motion.h2 variants={fadeUp}>Sistema Integrado de Gestão Hídrica</motion.h2>
           <motion.p variants={fadeUp}>
@@ -245,8 +264,8 @@ function LandingPage() {
               <motion.article
                 className={`reference-module-card module-${module.tone}`}
                 key={module.title}
-                whileHover={{ y: -3 }}
-                transition={{ duration: 0.18 }}
+                whileHover={shouldReduceMotion ? undefined : { y: -3 }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
               >
                 <span className="reference-module-icon">
                   <Icon size={40} />
@@ -407,11 +426,12 @@ function IndicatorCard({
   indicator: (typeof indicators)[number];
 }) {
   const Icon = indicator.icon;
+  const shouldReduceMotion = useReducedMotion();
 
   return (
     <motion.article
       className={`reference-kpi-card kpi-${indicator.tone}`}
-      initial="hidden"
+      initial={shouldReduceMotion ? false : 'hidden'}
       whileInView="show"
       viewport={{ once: true, amount: 0.3 }}
       variants={fadeUp}

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { lazy, Suspense, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useHydroRegistry } from '../HydroRegistryContext';
 import { flowSeries, productionSeries } from '../data';
 import { categoryMeta, statusLabel, systemModules } from '../metadata';
@@ -35,6 +35,14 @@ function MapFallback() {
 
 function Dashboard() {
   const { allRecords, registry, syncStatus, retrySync, backend, exportAssetsCsv } = useHydroRegistry();
+  const [appliedFilters, setAppliedFilters] = useState<AppliedDashboardFilters | null>(null);
+  const shouldReduceMotion = useReducedMotion();
+  const visibleRecords = useMemo(
+    () => appliedFilters
+      ? filterDashboardRecords(allRecords, appliedFilters.filters, appliedFilters.statuses)
+      : allRecords,
+    [allRecords, appliedFilters],
+  );
   const indicators = useMemo(() => makeIndicators(registry), [registry]);
   const dashboardAlerts = useMemo(() => makeAlerts(allRecords), [allRecords]);
   const maintenanceRows = useMemo(() => makeMaintenances(allRecords), [allRecords]);
@@ -46,6 +54,7 @@ function Dashboard() {
     () => productionSeries.map((point) => ({ month: point.label, Producao: point.value })),
     [],
   );
+
   const exportDashboardCsv = async () => {
     const csv = await exportAssetsCsv();
     downloadTextFile(csv, 'sighidro-ativos.csv', 'text/csv;charset=utf-8');
@@ -73,8 +82,10 @@ function Dashboard() {
     <motion.main
       animate="show"
       className="dashboard"
-      initial="hidden"
-      transition={{ duration: 0.36, ease: 'easeOut' }}
+      id="main-content"
+      initial={shouldReduceMotion ? false : 'hidden'}
+      tabIndex={-1}
+      transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.36, ease: 'easeOut' }}
       variants={fadeUp}
     >
       <motion.section className="hero-strip" variants={fadeUp}>
@@ -158,8 +169,8 @@ function Dashboard() {
         </div>
       </section>
 
-      <AdvancedFilters />
-      <AssetTable records={allRecords} onExportCsv={exportDashboardCsv} onExportSheet={exportDashboardSheet} />
+      <AdvancedFilters records={allRecords} onApply={setAppliedFilters} />
+      <AssetTable records={visibleRecords} onExportCsv={exportDashboardCsv} onExportSheet={exportDashboardSheet} />
     </motion.main>
   );
 }
@@ -440,7 +451,27 @@ function MaintenanceRow({ maintenance }: { maintenance: Maintenance }) {
   );
 }
 
-function AdvancedFilters() {
+type DashboardFilters = {
+  asset: string;
+  type: string;
+  location: string;
+  responsible: string;
+  period: string;
+  minimumLevel: string;
+};
+
+type AppliedDashboardFilters = {
+  filters: DashboardFilters;
+  statuses: string[];
+};
+
+function AdvancedFilters({
+  records,
+  onApply,
+}: {
+  records: HydroRecord[];
+  onApply: (filters: AppliedDashboardFilters | null) => void;
+}) {
   const [feedback, setFeedback] = useState('');
   const [filters, setFilters] = useState({
     asset: '',
@@ -450,7 +481,7 @@ function AdvancedFilters() {
     period: 'week',
     minimumLevel: '',
   });
-  const [activeStatuses, setActiveStatuses] = useState(['operando']);
+  const [activeStatuses, setActiveStatuses] = useState<string[]>([]);
 
   const updateFilter = (field: keyof typeof filters, value: string) => {
     setFilters((current) => ({ ...current, [field]: value }));
@@ -473,7 +504,8 @@ function AdvancedFilters() {
       period: 'week',
       minimumLevel: '',
     });
-    setActiveStatuses(['operando']);
+    setActiveStatuses([]);
+    onApply(null);
     setFeedback('Filtros limpos.');
   };
 
@@ -484,7 +516,9 @@ function AdvancedFilters() {
 
   const applyFilters = () => {
     window.localStorage.setItem('sighidro:dashboard-active-filters', JSON.stringify({ ...filters, statuses: activeStatuses }));
-    setFeedback('Filtros aplicados para a sessão atual.');
+    const filteredRecords = filterDashboardRecords(records, filters, activeStatuses);
+    onApply({ filters: { ...filters }, statuses: [...activeStatuses] });
+    setFeedback(`${filteredRecords.length} ativo(s) encontrado(s) com os filtros atuais.`);
   };
 
   return (
@@ -506,7 +540,7 @@ function AdvancedFilters() {
           </button>
         </div>
       </div>
-      {feedback ? <div className="inline-feedback">{feedback}</div> : null}
+      {feedback ? <div className="inline-feedback" role="status" aria-live="polite">{feedback}</div> : null}
 
       <div className="filters-grid">
         <label className="filter-field">
@@ -547,7 +581,14 @@ function AdvancedFilters() {
         </label>
         <label className="filter-field">
           <span>Nível mínimo</span>
-          <input value={filters.minimumLevel} onChange={(event) => updateFilter('minimumLevel', event.target.value)} placeholder="% ou m³" />
+          <input
+            min="0"
+            inputMode="decimal"
+            type="number"
+            value={filters.minimumLevel}
+            onChange={(event) => updateFilter('minimumLevel', event.target.value)}
+            placeholder="% ou m³"
+          />
         </label>
       </div>
 
@@ -562,6 +603,7 @@ function AdvancedFilters() {
             className={activeStatuses.includes(value) ? 'filter-chip active' : 'filter-chip'}
             key={value}
             type="button"
+            aria-pressed={activeStatuses.includes(value)}
             onClick={() => toggleStatus(value)}
           >
             {label}
@@ -600,37 +642,91 @@ function AssetTable({
       </div>
       <div className="asset-table" role="table" aria-label="Visão geral dos ativos hídricos">
         <div className="asset-row table-head" role="row">
-          <span>Código</span>
-          <span>Ativo</span>
-          <span>Categoria</span>
-          <span>Localidade</span>
-          <span>Status</span>
-          <span>Responsável</span>
-          <span>Vazão</span>
-          <span>Nível/Capacidade</span>
-          <span>Energia</span>
-          <span>Última medição</span>
+          <span role="columnheader">Código</span>
+          <span role="columnheader">Ativo</span>
+          <span role="columnheader">Categoria</span>
+          <span role="columnheader">Localidade</span>
+          <span role="columnheader">Status</span>
+          <span role="columnheader">Responsável</span>
+          <span role="columnheader">Vazão</span>
+          <span role="columnheader">Nível/Capacidade</span>
+          <span role="columnheader">Energia</span>
+          <span role="columnheader">Última medição</span>
         </div>
+        {!records.length ? <div className="empty-state" role="status">Nenhum ativo corresponde aos filtros atuais.</div> : null}
         {records.map((record) => (
           <div className="asset-row" key={record.id} role="row">
-            <span>{record.code}</span>
-            <strong>{record.name}</strong>
-            <span>{categoryMeta[record.category].label}</span>
-            <span>{record.location}</span>
-            <span className="status-cell">
+            <span role="cell" data-label="Código">{record.code}</span>
+            <strong role="cell" data-label="Ativo" data-card-title>{record.name}</strong>
+            <span role="cell" data-label="Categoria">{categoryMeta[record.category].label}</span>
+            <span role="cell" data-label="Localidade">{record.location}</span>
+            <span role="cell" data-label="Status" className="status-cell">
               <i className={`status-dot status-${record.status}`} />
               {statusLabel[record.status]}
             </span>
-            <span>{record.responsible}</span>
-            <span>{record.flowRate} m³/h</span>
-            <span>{resolveLevelOrCapacity(record)}</span>
-            <span>{record.energyType ?? '-'}</span>
-            <span>{record.lastReading}</span>
+            <span role="cell" data-label="Responsável">{record.responsible}</span>
+            <span role="cell" data-label="Vazão">{record.flowRate} m³/h</span>
+            <span role="cell" data-label="Nível / capacidade">{resolveLevelOrCapacity(record)}</span>
+            <span role="cell" data-label="Energia">{record.energyType ?? '-'}</span>
+            <span role="cell" data-label="Última medição">{record.lastReading}</span>
           </div>
         ))}
       </div>
     </section>
   );
+}
+
+const normalizeSearchText = (value: string) =>
+  value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').trim();
+
+const parseRecordDate = (value: string) => {
+  const brazilianDate = value.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+
+  if (brazilianDate) {
+    const [, day, month, year, hour = '0', minute = '0'] = brazilianDate;
+    return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+function filterDashboardRecords(records: HydroRecord[], filters: DashboardFilters, activeStatuses: string[]) {
+  const assetQuery = normalizeSearchText(filters.asset);
+  const locationQuery = normalizeSearchText(filters.location);
+  const responsibleQuery = normalizeSearchText(filters.responsible);
+  const minimumLevel = Number(filters.minimumLevel.replace(',', '.'));
+  const datedRecords = records
+    .map((record) => parseRecordDate(record.lastReading))
+    .filter((date): date is Date => Boolean(date));
+  const referenceDate = datedRecords.length
+    ? new Date(Math.max(...datedRecords.map((date) => date.getTime())))
+    : null;
+  const periodInDays = filters.period === 'today' ? 1 : filters.period === 'month' ? 30 : 7;
+
+  return records.filter((record) => {
+    const searchableAsset = normalizeSearchText(`${record.code} ${record.name}`);
+    const matchesAsset = !assetQuery || searchableAsset.includes(assetQuery);
+    const matchesType = filters.type === 'all' || record.category === filters.type;
+    const matchesLocation = !locationQuery || normalizeSearchText(record.location).includes(locationQuery);
+    const matchesResponsible = filters.responsible === 'all'
+      || normalizeSearchText(record.responsible).includes(responsibleQuery);
+    const matchesStatus = !activeStatuses.length || activeStatuses.includes(record.status);
+    const comparableLevel = record.reservoirLevel ?? record.capacityM3;
+    const matchesMinimum = !filters.minimumLevel
+      || (typeof comparableLevel === 'number' && comparableLevel >= minimumLevel);
+    const recordDate = parseRecordDate(record.lastReading);
+    const matchesPeriod = !referenceDate || !recordDate
+      || referenceDate.getTime() - recordDate.getTime() < periodInDays * 24 * 60 * 60 * 1000;
+
+    return matchesAsset
+      && matchesType
+      && matchesLocation
+      && matchesResponsible
+      && matchesStatus
+      && matchesMinimum
+      && matchesPeriod;
+  });
 }
 
 const resolveLevelOrCapacity = (record: HydroRecord) => {

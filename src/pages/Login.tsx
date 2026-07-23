@@ -1,7 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useAuth } from '../AuthContext';
 
 const fadeUp = {
@@ -17,6 +17,8 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -25,6 +27,7 @@ function LoginPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+    setNotice(null);
 
     try {
       if (mode === 'login') {
@@ -41,6 +44,7 @@ function LoginPage() {
 
   const toggleMode = () => {
     setError(null);
+    setNotice(null);
     setMode((current) => (current === 'login' ? 'register' : 'login'));
   };
 
@@ -49,10 +53,10 @@ function LoginPage() {
       <section className="auth-layout">
         <motion.div
           className="auth-intro"
-          initial="hidden"
+          initial={shouldReduceMotion ? false : 'hidden'}
           animate="show"
           variants={fadeUp}
-          transition={{ duration: 0.36, ease: 'easeOut' }}
+          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.36, ease: 'easeOut' }}
         >
           <div className="auth-brand-panel">
             <img className="auth-brand-logo-large" src="/logo.png" alt="Logo SIGHIDRO" />
@@ -68,10 +72,10 @@ function LoginPage() {
         <motion.form
           className="panel auth-card"
           onSubmit={handleSubmit}
-          initial="hidden"
+          initial={shouldReduceMotion ? false : 'hidden'}
           animate="show"
           variants={fadeUp}
-          transition={{ duration: 0.36, delay: 0.06, ease: 'easeOut' }}
+          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.36, delay: 0.06, ease: 'easeOut' }}
         >
           <div className="auth-login-shell">
             <img className="auth-login-mark" src="/logo.png" alt="" />
@@ -91,9 +95,12 @@ function LoginPage() {
                   <input
                     type="email"
                     required
+                    autoComplete="username"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="controleinterno@jardim.ce.gov.br"
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={error ? 'auth-error' : undefined}
                   />
                 </label>
                 <label>
@@ -103,9 +110,12 @@ function LoginPage() {
                       type={showPassword ? 'text' : 'password'}
                       required
                       minLength={6}
+                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
                       placeholder={mode === 'login' ? 'Digite sua senha' : 'Crie uma senha segura'}
+                      aria-invalid={Boolean(error)}
+                      aria-describedby={error ? 'auth-error' : undefined}
                     />
                     <button
                       type="button"
@@ -122,9 +132,17 @@ function LoginPage() {
                 Após o login, o navegador poderá manter sua sessão salva neste dispositivo.
               </p>
 
-              {error ? <p className="auth-error">{error}</p> : null}
+              {error ? <p id="auth-error" className="auth-error" role="alert">{error}</p> : null}
+              {notice ? <p className="auth-notice" role="status" aria-live="polite">{notice}</p> : null}
 
-              <button className="auth-forgot" type="button">
+              <button
+                className="auth-forgot"
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setNotice('Solicite a redefinição da senha a um administrador do SIGHIDRO.');
+                }}
+              >
                 Esqueci minha senha
               </button>
 

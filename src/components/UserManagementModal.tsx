@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Edit2, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Edit2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -205,7 +205,7 @@ export function UserManagementModal({
 
         {formMode === null ? (
           <div className="space-y-4">
-            <div className="flex justify-between items-center pb-4 border-b border-slate-200 dark:border-white/10">
+            <div className="user-management-toolbar flex justify-between items-center gap-3 pb-4 border-b border-slate-200 dark:border-white/10">
               <h3 className="font-medium text-sm">Usuários Cadastrados</h3>
               <Button
                 onClick={handleAddClick}
@@ -218,27 +218,32 @@ export function UserManagementModal({
               </Button>
             </div>
 
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            <div className="user-management-list space-y-2 max-h-[400px] overflow-y-auto">
+              {!users.length ? (
+                <p className="rounded-lg border border-dashed border-slate-300 p-4 text-center text-sm text-slate-600 dark:border-white/15 dark:text-slate-400" role="status">
+                  Nenhum usuário cadastrado.
+                </p>
+              ) : null}
               {users.map((user) => (
                 <div
                   key={user.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+                  className="user-management-card flex items-center justify-between gap-3 p-3 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
                 >
-                  <div className="flex-1">
+                  <div className="user-management-details min-w-0 flex-1">
                     <div className="font-medium text-sm">{user.name}</div>
-                    <div className="text-xs text-slate-600 dark:text-slate-400">
+                    <div className="break-all text-xs text-slate-600 dark:text-slate-400">
                       {user.email}
                     </div>
                     <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">
                       {ROLE_LABELS[user.role]}
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="user-management-actions flex gap-2">
                     <Button
                       onClick={() => handleEditClick(user)}
                       size="sm"
                       variant="ghost"
-                      className="h-8 w-8 p-0"
+                      className="h-11 w-11 p-0"
                       aria-label="Editar usuário"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -247,7 +252,7 @@ export function UserManagementModal({
                       onClick={() => handleDelete(user.id)}
                       size="sm"
                       variant="ghost"
-                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                      className="h-11 w-11 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
                       aria-label="Deletar usuário"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -258,7 +263,13 @@ export function UserManagementModal({
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <form
+            className="user-management-form space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleSave();
+            }}
+          >
             <h3 className="font-medium text-sm">
               {formMode === 'add' ? 'Novo Usuário' : 'Editar Usuário'}
             </h3>
@@ -270,6 +281,8 @@ export function UserManagementModal({
                 </Label>
                 <Input
                   id="user-name"
+                  autoComplete="name"
+                  autoFocus
                   value={formState.name}
                   onChange={(e) =>
                     setFormState({ ...formState, name: e.target.value })
@@ -277,9 +290,10 @@ export function UserManagementModal({
                   placeholder="Digite o nome"
                   className="mt-1"
                   aria-invalid={!!errors.name}
+                  aria-describedby={errors.name ? 'user-name-error' : undefined}
                 />
                 {errors.name && (
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                  <p id="user-name-error" className="text-xs text-red-600 dark:text-red-400 mt-1" role="alert">
                     {errors.name}
                   </p>
                 )}
@@ -292,6 +306,7 @@ export function UserManagementModal({
                 <Input
                   id="user-email"
                   type="email"
+                  autoComplete="email"
                   value={formState.email}
                   onChange={(e) =>
                     setFormState({ ...formState, email: e.target.value })
@@ -299,9 +314,10 @@ export function UserManagementModal({
                   placeholder="usuario@sighidro.gov.br"
                   className="mt-1"
                   aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? 'user-email-error' : undefined}
                 />
                 {errors.email && (
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                  <p id="user-email-error" className="text-xs text-red-600 dark:text-red-400 mt-1" role="alert">
                     {errors.email}
                   </p>
                 )}
@@ -320,7 +336,12 @@ export function UserManagementModal({
                     })
                   }
                 >
-                  <SelectTrigger id="user-role" className="mt-1">
+                  <SelectTrigger
+                    id="user-role"
+                    className="mt-1 min-h-11 w-full"
+                    aria-invalid={!!errors.role}
+                    aria-describedby={errors.role ? 'user-role-error user-role-description' : 'user-role-description'}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -335,30 +356,31 @@ export function UserManagementModal({
                     )}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
+                <p id="user-role-description" className="text-xs text-slate-600 dark:text-slate-400 mt-2">
                   {ROLE_DESCRIPTIONS[formState.role]}
                 </p>
                 {errors.role && (
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                  <p id="user-role-error" className="text-xs text-red-600 dark:text-red-400 mt-1" role="alert">
                     {errors.role}
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="flex gap-2 justify-end pt-4 border-t border-slate-200 dark:border-white/10">
+            <div className="user-management-form-actions flex gap-2 justify-end pt-4 border-t border-slate-200 dark:border-white/10">
               <Button
                 onClick={handleCancel}
+                type="button"
                 variant="outline"
                 size="sm"
               >
                 Cancelar
               </Button>
-              <Button onClick={handleSave} variant="default" size="sm">
+              <Button type="submit" variant="default" size="sm">
                 {formMode === 'add' ? 'Cadastrar' : 'Salvar'}
               </Button>
             </div>
-          </div>
+          </form>
         )}
       </DialogContent>
     </Dialog>

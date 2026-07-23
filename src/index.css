@@ -3105,7 +3105,7 @@
   gap: 18px;
 }
 
-.module-card {
+.landing-page .module-card {
   display: grid;
   gap: 16px;
   min-height: 220px;
@@ -3116,7 +3116,7 @@
   box-shadow: 0 28px 80px rgba(1, 10, 23, 0.16);
 }
 
-.module-icon {
+.landing-page .module-icon {
   width: 46px;
   height: 46px;
   display: grid;
@@ -3126,13 +3126,13 @@
   color: #67e8f9;
 }
 
-.module-card h3 {
+.landing-page .module-card h3 {
   margin: 0;
   color: #f8fafc;
   font-size: 1.05rem;
 }
 
-.module-card p {
+.landing-page .module-card p {
   margin: 0;
   color: #9fb7c6;
   line-height: 1.75;

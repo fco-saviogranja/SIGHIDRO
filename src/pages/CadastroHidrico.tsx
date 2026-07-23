@@ -399,7 +399,7 @@ function CadastroHidrico() {
   };
 
   return (
-    <main className="dashboard route-page">
+    <main className="dashboard route-page" id="main-content" tabIndex={-1}>
       <section className="page-hero">
         <div>
           <span className="eyebrow">Cadastro Hídrico</span>
@@ -447,6 +447,7 @@ function CadastroHidrico() {
               className={item.category === activeCategory ? 'summary-card active' : 'summary-card'}
               key={item.category}
               type="button"
+              aria-pressed={item.category === activeCategory}
               onClick={() => switchCategory(item.category)}
             >
               <Icon size={20} />
@@ -504,7 +505,15 @@ function CadastroHidrico() {
         </label>
       </section>
 
-      {feedback ? <div className={`feedback-banner feedback-${feedback.tone}`}>{feedback.text}</div> : null}
+      {feedback ? (
+        <div
+          className={`feedback-banner feedback-${feedback.tone}`}
+          role={feedback.tone === 'error' ? 'alert' : 'status'}
+          aria-live={feedback.tone === 'error' ? 'assertive' : 'polite'}
+        >
+          {feedback.text}
+        </div>
+      ) : null}
 
       <section className="registry-layout">
         <form className="panel registry-form" onSubmit={submitRecord}>
@@ -524,6 +533,7 @@ function CadastroHidrico() {
                 className={category === activeCategory ? 'filter-chip active' : 'filter-chip'}
                 key={category}
                 type="button"
+                aria-pressed={category === activeCategory}
                 onClick={() => switchCategory(category)}
               >
                 {categoryMeta[category].label}
@@ -662,6 +672,7 @@ function CadastroHidrico() {
 
             <div className="full-field coordinate-picker-field">
               <span>Localização geográfica</span>
+              <small className="coordinate-map-help">Toque no mapa para marcar o ponto ou informe latitude e longitude nos campos acima.</small>
               <Suspense fallback={<div className="coordinate-map-loading">Carregando seletor geográfico</div>}>
                 <CoordinatePickerMap latitude={draft.latitude} longitude={draft.longitude} onChange={updateDraftCoordinates} />
               </Suspense>
@@ -708,37 +719,42 @@ function CadastroHidrico() {
 
           <div className="registry-table" role="table" aria-label={`Cadastro de ${activeMeta.plural}`}>
             <div className="registry-row table-head" role="row">
-              <span>Código</span>
-              <span>Nome</span>
-              <span>Status</span>
-              <span>Vazão</span>
-              <span>Responsável</span>
-              <span>Ações</span>
+              <span role="columnheader">Código</span>
+              <span role="columnheader">Nome</span>
+              <span role="columnheader">Status</span>
+              <span role="columnheader">Vazão</span>
+              <span role="columnheader">Responsável</span>
+              <span role="columnheader">Ações</span>
             </div>
-            {isLoading ? <div className="empty-state">Carregando cadastro hídrico...</div> : null}
-            {!isLoading && !filteredRecords.length ? <div className="empty-state">Nenhum ativo encontrado para os filtros atuais.</div> : null}
+            {isLoading ? <div className="empty-state" role="status">Carregando cadastro hídrico...</div> : null}
+            {!isLoading && !filteredRecords.length ? <div className="empty-state" role="status">Nenhum ativo encontrado para os filtros atuais.</div> : null}
             {filteredRecords.map((record) => (
               <div
                 className={record.id === selectedAsset?.id ? 'registry-row registry-row-button selected' : 'registry-row registry-row-button'}
                 key={record.id}
                 role="row"
+                aria-selected={record.id === selectedAsset?.id}
                 tabIndex={0}
                 onClick={() => setSelectedId(record.id)}
                 onKeyDown={(event) => {
+                  if (event.target !== event.currentTarget) {
+                    return;
+                  }
                   if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
                     setSelectedId(record.id);
                   }
                 }}
               >
-                <span>{record.code}</span>
-                <strong>{record.name}</strong>
-                <span>
+                <span role="cell" data-label="Código">{record.code}</span>
+                <strong role="cell" data-label="Nome" data-card-title>{record.name}</strong>
+                <span role="cell" data-label="Status">
                   <i className={`status-dot status-${record.status}`} />
                   {statusLabel[record.status]}
                 </span>
-                <span>{record.flowRate ?? 0} m³/h</span>
-                <span>{record.responsible}</span>
-                <span className="row-actions" onClick={(event) => event.stopPropagation()}>
+                <span role="cell" data-label="Vazão">{record.flowRate ?? 0} m³/h</span>
+                <span role="cell" data-label="Responsável">{record.responsible}</span>
+                <span role="cell" data-label="Ações" className="row-actions" onClick={(event) => event.stopPropagation()}>
                   <button type="button" aria-label={`Editar ${record.name}`} onClick={() => startEdit(record)}>
                     <Edit3 size={17} />
                   </button>
@@ -791,10 +807,10 @@ function CadastroHidrico() {
             {selectedReadings.length ? (
               selectedReadings.map((reading) => (
                 <article key={reading.id}>
-                  <strong>{new Date(reading.readingAt).toLocaleString('pt-BR')}</strong>
-                  <span>{reading.flowRate ?? '-'} m³/h</span>
-                  <span>{reading.reservoirLevel ?? '-'}%</span>
-                  <small>{reading.notes || reading.operatorName}</small>
+                  <strong data-label="Data">{new Date(reading.readingAt).toLocaleString('pt-BR')}</strong>
+                  <span data-label="Vazão">{reading.flowRate ?? '-'} m³/h</span>
+                  <span data-label="Nível">{reading.reservoirLevel ?? '-'}%</span>
+                  <small data-label="Observação">{reading.notes || reading.operatorName || '-'}</small>
                 </article>
               ))
             ) : (
@@ -843,9 +859,9 @@ function CadastroHidrico() {
             {selectedMaintenance.length ? (
               selectedMaintenance.map((order) => (
                 <article key={order.id}>
-                  <strong>{order.service}</strong>
-                  <span>{order.status.replace('_', ' ')}</span>
-                  <span>{order.dueDate ?? 'Sem prazo'}</span>
+                  <strong data-label="Serviço">{order.service}</strong>
+                  <span data-label="Status">{order.status.replace('_', ' ')}</span>
+                  <span data-label="Prazo">{order.dueDate ?? 'Sem prazo'}</span>
                   <button type="button" aria-label={`Concluir ${order.service}`} onClick={() => { void completeMaintenance(order.id); }} disabled={order.status === 'concluida'}>
                     <Check size={15} />
                   </button>

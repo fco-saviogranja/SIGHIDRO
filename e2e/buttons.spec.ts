@@ -35,7 +35,7 @@ test('botões principais abrem modal, redirecionam e exportam', async ({ page })
 
   await page.goto('/dashboard');
   await page.getByRole('button', { name: 'Aplicar filtros' }).click();
-  await expect(page.getByText('Filtros aplicados para a sessão atual.')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: /ativo\(s\) encontrado\(s\)/ })).toBeVisible();
   await page.getByRole('button', { name: 'Salvar visão' }).click();
   await expect(page.getByText('Visão salva neste navegador.')).toBeVisible();
   await page.getByRole('button', { name: 'Limpar' }).click();
