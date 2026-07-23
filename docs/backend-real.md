@@ -32,13 +32,13 @@ Todos os usuários autenticados podem editar; toda criação, alteração e excl
 
 O arquivo `render.yaml` define toda a infraestrutura principal:
 
-- `sighidro-db`: Postgres gerenciado.
+- `sighidro-db-202607`: Postgres gerenciado criado para substituir a instância gratuita expirada de maio de 2026.
 - `sighidro-api`: Web Service Node/Express.
 - `sighidro-web`: Static Site Vite.
 
 O Render cria automaticamente:
 
-- `DATABASE_URL`, vindo do banco `sighidro-db`.
+- `DATABASE_URL`, vindo do banco `sighidro-db-202607`.
 - `JWT_SECRET`, gerado pelo blueprint.
 - Deploy da API em `https://sighidro-api.onrender.com`.
 - Deploy do frontend em `https://sighidro-web.onrender.com`.
@@ -50,6 +50,8 @@ ADMIN_PASSWORD=<senha forte do usuario admin>
 ```
 
 Esse valor fica marcado como `sync: false`, entao nao entra no Git.
+
+> Importante: bancos PostgreSQL gratuitos do Render expiram 30 dias após a criação e são apagados depois do período de carência. A instância `sighidro-db-202607` é adequada apenas para restaurar temporariamente o serviço. Para produção contínua e com backups, migre-a para um plano pago antes de 21/08/2026.
 
 Em producao, `ALLOW_IN_MEMORY_DB=false`. Se o Postgres falhar, o backend falha tambem. Isso evita operar com dados temporarios.
 

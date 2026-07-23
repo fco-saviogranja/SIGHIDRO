@@ -1,5 +1,5 @@
 databases:
-  - name: sighidro-db
+  - name: sighidro-db-202607
     databaseName: sighidro
     user: sighidro
     plan: free
@@ -7,10 +7,10 @@ databases:
 services:
   - type: web
     name: sighidro-api
-    env: node
+    runtime: node
     rootDir: server
     plan: free
-    buildCommand: npm install
+    buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
@@ -30,13 +30,13 @@ services:
         value: https://sighidro.tech,https://www.sighidro.tech,https://sighidro-web.onrender.com
       - key: DATABASE_URL
         fromDatabase:
-          name: sighidro-db
+          name: sighidro-db-202607
           property: connectionString
 
   - type: web
     name: sighidro-web
     runtime: static
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     staticPublishPath: dist
     routes:
       - type: rewrite
