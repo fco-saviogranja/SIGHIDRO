@@ -16,6 +16,10 @@ test('botões principais abrem modal, redirecionam e exportam', async ({ page })
 
   await page.getByRole('button', { name: 'Abrir notificações' }).click();
   await expect(page.getByRole('heading', { name: 'Notificações operacionais' })).toBeVisible();
+  const markAllNotifications = page.getByRole('button', { name: 'Marcar todas como lidas' });
+  await expect(markAllNotifications).toBeVisible();
+  await markAllNotifications.click();
+  await expect(page.getByRole('button', { name: 'Tudo lido' })).toBeDisabled();
   await page.getByRole('link', { name: 'Abrir monitoramento' }).click();
   await page.waitForURL('**/monitoramento');
   await expect(page.getByRole('heading', { name: 'Leituras e indicadores conectados ao cadastro' })).toBeVisible();
@@ -34,6 +38,7 @@ test('botões principais abrem modal, redirecionam e exportam', async ({ page })
   await expect(page.getByRole('heading', { name: 'Distribuição territorial dos ativos cadastrados' })).toBeVisible();
 
   await page.goto('/dashboard');
+  await page.locator('summary.dashboard-filter-summary').click();
   await page.getByRole('button', { name: 'Aplicar filtros' }).click();
   await expect(page.getByRole('status').filter({ hasText: /ativo\(s\) encontrado\(s\)/ })).toBeVisible();
   await page.getByRole('button', { name: 'Salvar visão' }).click();

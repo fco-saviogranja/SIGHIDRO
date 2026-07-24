@@ -87,10 +87,10 @@ function Dashboard() {
       transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.36, ease: 'easeOut' }}
       variants={fadeUp}
     >
-      <motion.section className="hero-strip" variants={fadeUp}>
+      <motion.section className="hero-strip dashboard-hero" variants={fadeUp}>
         <div>
-          <span className="eyebrow">Centro de Inteligência Hídrica Municipal</span>
-          <h1>Operação integrada do abastecimento público</h1>
+          <span className="eyebrow">Operação hídrica</span>
+          <h1>Visão geral da operação</h1>
         </div>
         <div className="hero-actions" aria-label="Indicadores rápidos">
           <span>
@@ -99,7 +99,7 @@ function Dashboard() {
           </span>
           <span>
             <CircleGauge size={18} />
-            {dashboardAlerts.length} alertas em triagem
+            {dashboardAlerts.length} pendências
           </span>
           <span>
             {backend === 'api' ? (
@@ -118,7 +118,7 @@ function Dashboard() {
         </div>
       </motion.section>
 
-      <motion.section className="metrics-grid" aria-label="Indicadores operacionais" variants={fadeUp}>
+      <motion.section className="metrics-grid dashboard-metrics-grid" aria-label="Indicadores operacionais" variants={fadeUp}>
         {indicators.map((indicator) => (
           <KpiCard key={indicator.label} indicator={indicator} />
         ))}
@@ -135,37 +135,31 @@ function Dashboard() {
         <MaintenancePanel rows={maintenanceRows} />
       </section>
 
-      <section className="modules-section">
+      <section className="modules-section dashboard-quick-section">
         <div className="section-heading">
           <div>
-            <span className="eyebrow">Estrutura modular</span>
-            <h2>Módulos do SIGHIDRO</h2>
+            <span className="eyebrow">Navegação</span>
+            <h2>Acessos rápidos</h2>
           </div>
-          <span className="section-note">Base preparada para expansão operacional e administrativa.</span>
+          <span className="section-note">Abra diretamente a área necessária.</span>
         </div>
-        <div className="modules-grid">
+        <nav className="dashboard-quick-links" aria-label="Acessos rápidos do dashboard">
           {systemModules.slice(0, 5).map((module) => {
             const Icon = module.icon;
 
             return (
-              <Link className={`module-card accent-${module.accent}`} key={module.id} to={module.path}>
-                <div className="module-topline">
-                  <span className="module-icon">
-                    <Icon size={22} />
-                  </span>
-                  <span className={`status-pill status-${module.status}`}>{statusLabel[module.status]}</span>
-                </div>
-                <h3>{module.title}</h3>
-                <p>{module.description}</p>
-                <div className="module-items">
-                  {module.items.map((item) => (
-                    <span key={item}>{item}</span>
-                  ))}
-                </div>
+              <Link className="dashboard-quick-link" key={module.id} to={module.path}>
+                <span className="module-icon">
+                  <Icon size={20} />
+                </span>
+                <span>
+                  <strong>{module.title}</strong>
+                  <small>Abrir módulo</small>
+                </span>
               </Link>
             );
           })}
-        </div>
+        </nav>
       </section>
 
       <AdvancedFilters records={allRecords} onApply={setAppliedFilters} />
@@ -559,12 +553,15 @@ function AdvancedFilters({
   };
 
   return (
-    <section className="panel filters-panel" aria-label="Filtros avançados do dashboard">
-      <div className="filters-header">
-        <div>
-          <span className="eyebrow">Filtros avançados</span>
-          <h2>Refino operacional</h2>
-        </div>
+    <details className="panel filters-panel dashboard-filter-details">
+      <summary className="dashboard-filter-summary">
+        <span>
+          <span className="eyebrow">Consulta</span>
+          <strong>Filtros avançados</strong>
+        </span>
+        <small>Expandir filtros</small>
+      </summary>
+      <div className="dashboard-filter-content" aria-label="Filtros avançados do dashboard">
         <div className="filters-actions">
           <button className="ghost-action" type="button" onClick={clearFilters}>
             Limpar
@@ -576,10 +573,9 @@ function AdvancedFilters({
             Aplicar filtros
           </button>
         </div>
-      </div>
-      {feedback ? <div className="inline-feedback" role="status" aria-live="polite">{feedback}</div> : null}
+        {feedback ? <div className="inline-feedback" role="status" aria-live="polite">{feedback}</div> : null}
 
-      <div className="filters-grid">
+        <div className="filters-grid">
         <label className="filter-field">
           <span>Ativo / código</span>
           <input value={filters.asset} onChange={(event) => updateFilter('asset', event.target.value)} placeholder="POC-001, BMB-012..." />
@@ -627,9 +623,9 @@ function AdvancedFilters({
             placeholder="% ou m³"
           />
         </label>
-      </div>
+        </div>
 
-      <div className="filters-chips" aria-label="Filtros por status">
+        <div className="filters-chips" aria-label="Filtros por status">
         {[
           ['operando', 'Operando'],
           ['atenção', 'Atenção'],
@@ -646,8 +642,9 @@ function AdvancedFilters({
             {label}
           </button>
         ))}
+        </div>
       </div>
-    </section>
+    </details>
   );
 }
 

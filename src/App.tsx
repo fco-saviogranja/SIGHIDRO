@@ -11,7 +11,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './components/ui/sheet';
 import { Button } from './components/ui/button';
+import { NotificationCenter } from './components/NotificationCenter';
 import { UserManagementModal } from './components/UserManagementModal';
+import { useOperationalNotifications } from './hooks/useOperationalNotifications';
 import { loadSystemUsers, subscribeSystemUsers } from './services/userRepository';
 
 const CadastroHidrico = lazy(() => import('./pages/CadastroHidrico'));
@@ -87,6 +89,7 @@ function Header() {
   const [managedUsers, setManagedUsers] = useState(() => loadSystemUsers());
   const { isAuthenticated, userEmail, userRole, logout, canManageUsers } = useAuth();
   const { isDark, theme, toggleTheme } = useTheme();
+  const { markAllAsRead, markAsRead, notifications, unreadCount } = useOperationalNotifications(userEmail);
   const roleLabel = 
     userRole === 'administrador' 
       ? 'Administrador' 
@@ -171,12 +174,18 @@ function Header() {
             <Button
               variant="ghost"
               size="icon"
-              className={`header-desktop-action ${iconButtonClass}`}
+              className={`header-notification-action relative ${iconButtonClass}`}
               type="button"
               onClick={() => setActiveDialog('notifications')}
               aria-label="Abrir notificações"
+              title={`${unreadCount} notificação(ões) não lida(s)`}
             >
                <Bell className="w-4 h-4" />
+               {unreadCount ? (
+                 <span className="header-notification-badge" aria-hidden="true">
+                   {unreadCount > 9 ? '9+' : unreadCount}
+                 </span>
+               ) : null}
             </Button>
 
             <Button
@@ -273,6 +282,7 @@ function Header() {
                     >
                       <Bell className="mr-2 h-4 w-4" />
                       Notificações
+                      {unreadCount ? <span className="mobile-notification-count">{unreadCount}</span> : null}
                     </Button>
                     <Button
                       variant="outline"
@@ -333,24 +343,14 @@ function Header() {
       </header>
 
       <Dialog open={activeDialog === 'notifications'} onOpenChange={(open) => setActiveDialog(open ? 'notifications' : null)}>
-        <DialogContent className="sighidro-dialog">
-          <DialogHeader>
-            <DialogTitle>Notificações operacionais</DialogTitle>
-            <DialogDescription>Resumo rápido dos eventos mais importantes do SIGHIDRO.</DialogDescription>
-          </DialogHeader>
-          <div className="dialog-list">
-            <article>
-              <strong>Monitoramento disponível</strong>
-              <span>Use o módulo de monitoramento para acompanhar alertas e leituras dos ativos.</span>
-            </article>
-            <article>
-              <strong>Cadastro hídrico sincronizado</strong>
-              <span>Os botões de exportação e navegação agora executam ações reais.</span>
-            </article>
-          </div>
-          <NavLink className="primary-action dialog-action" to="/monitoramento" onClick={() => setActiveDialog(null)}>
-            Abrir monitoramento
-          </NavLink>
+        <DialogContent className="sighidro-dialog notification-dialog">
+          <NotificationCenter
+            markAllAsRead={markAllAsRead}
+            markAsRead={markAsRead}
+            notifications={notifications}
+            onNavigate={() => setActiveDialog(null)}
+            unreadCount={unreadCount}
+          />
         </DialogContent>
       </Dialog>
 

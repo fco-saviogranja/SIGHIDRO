@@ -65,6 +65,7 @@ test('área autenticada mantém menu, formulários e tabelas utilizáveis no mob
   await loginAsAdmin(page);
   await expectNoDocumentOverflow(page);
 
+  await page.locator('summary.dashboard-filter-summary').click();
   await page.locator('.filters-grid select').first().selectOption('poço');
   await page.getByRole('button', { name: 'Aplicar filtros' }).click();
   await expect(page.getByRole('status').filter({ hasText: /ativo\(s\) encontrado\(s\)/ })).toBeVisible();
@@ -76,7 +77,11 @@ test('área autenticada mantém menu, formulários e tabelas utilizáveis no mob
   await page.getByRole('button', { name: 'Limpar' }).click();
 
   if (viewportWidth <= 640) {
-    await expect(page.getByRole('button', { name: 'Abrir notificações' })).toBeHidden();
+    const notificationButton = page.getByRole('button', { name: 'Abrir notificações' });
+    await expect(notificationButton).toBeVisible();
+    const notificationButtonBox = await notificationButton.boundingBox();
+    expect(notificationButtonBox?.width).toBeGreaterThanOrEqual(44);
+    expect(notificationButtonBox?.height).toBeGreaterThanOrEqual(44);
     const menuButton = page.getByRole('button', { name: 'Abrir menu' });
     const menuButtonBox = await menuButton.boundingBox();
     expect(menuButtonBox?.width).toBeGreaterThanOrEqual(44);

@@ -975,11 +975,112 @@ html:not(.dark) select {
     background: rgba(3, 10, 20, 0.9);
     box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.24);
   }
+
+  .dashboard-hero,
+  .app-shell.dark .dashboard-hero {
+    min-height: 0;
+    align-items: flex-start;
+    padding: 14px;
+  }
+
+  .dashboard-hero h1,
+  .app-shell.dark .dashboard-hero h1 {
+    font-size: clamp(1.55rem, 7.2vw, 2rem);
+  }
+
+  .dashboard-hero .hero-actions {
+    display: flex;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 10px 14px;
+    overflow: visible;
+  }
+
+  .dashboard-hero .hero-actions > span {
+    min-height: 0;
+    flex: 0 0 auto;
+    padding: 0;
+  }
+
+  .dashboard-metrics-grid .kpi-card {
+    min-height: 112px;
+    padding: 14px;
+  }
+
+  .dashboard-quick-section .section-heading {
+    align-items: flex-start;
+  }
+
+  .dashboard-quick-section .section-note {
+    display: none;
+  }
+
+  .dashboard-quick-links {
+    display: flex;
+    margin-inline: -10px;
+    padding: 0 10px 4px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .dashboard-quick-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dashboard-quick-link {
+    min-width: 168px;
+    min-height: 68px;
+    flex: 0 0 168px;
+    scroll-snap-align: start;
+  }
+
+  .dashboard-filter-summary {
+    min-height: 64px;
+    padding: 12px 14px;
+  }
+
+  .dashboard-filter-content {
+    padding: 14px;
+  }
+
+  .dashboard-filter-content > .filters-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard-filter-content > .filters-actions > * {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 8px;
+  }
+
+  .notification-dialog-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .notification-read-all {
+    width: 100%;
+  }
+
+  .notification-list {
+    max-height: min(62dvh, 520px);
+  }
+
+  .notification-content {
+    padding: 12px;
+  }
 }
 
 @media (max-width: 340px) {
   .dashboard {
     width: calc(100% - 12px);
+  }
+
+  .dashboard-metrics-grid .kpi-trend {
+    display: none;
   }
 
   .metrics-grid,
@@ -988,6 +1089,10 @@ html:not(.dark) select {
   .module-table-panel .asset-row:not(.table-head),
   .registry-row:not(.table-head) {
     grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .metrics-grid.dashboard-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
   .summary-card span,
