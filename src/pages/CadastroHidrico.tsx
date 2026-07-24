@@ -541,7 +541,11 @@ function CadastroHidrico() {
             ))}
           </div>
 
-          <div className="form-grid">
+          <div className="form-sections">
+            <fieldset className="form-section">
+              <legend>Identificação</legend>
+              <p className="form-section-description">Informações usadas para localizar o ativo no sistema.</p>
+              <div className="form-grid">
             <div className="form-field">
               <label htmlFor="asset-name">Nome</label>
               <input
@@ -567,6 +571,14 @@ function CadastroHidrico() {
               />
               <small className="field-help" id="asset-location-help">Bairro, comunidade, estação ou zona onde o ativo está instalado.</small>
             </div>
+
+              </div>
+            </fieldset>
+
+            <fieldset className="form-section">
+              <legend>Operação</legend>
+              <p className="form-section-description">Condição atual e dados que alimentam os indicadores.</p>
+              <div className="form-grid">
 
             <div className="form-field">
               <label htmlFor="asset-status">Status</label>
@@ -626,6 +638,14 @@ function CadastroHidrico() {
               </div>
             ) : null}
 
+              </div>
+            </fieldset>
+
+            <fieldset className="form-section">
+              <legend>Detalhes técnicos</legend>
+              <p className="form-section-description">Características do equipamento e da instalação.</p>
+              <div className="form-grid">
+
             {activeCategory === 'bomba' || activeCategory === 'poço' ? (
               <div className="form-field">
                 <label htmlFor="asset-power">Potência (HP)</label>
@@ -680,6 +700,14 @@ function CadastroHidrico() {
               </div>
             ) : null}
 
+              </div>
+            </fieldset>
+
+            <fieldset className="form-section">
+              <legend>Localização geográfica</legend>
+              <p className="form-section-description">Coordenadas e ponto exibido no mapa operacional.</p>
+              <div className="form-grid">
+
             <div className="form-field">
               <label htmlFor="asset-latitude">Latitude</label>
               <input
@@ -714,6 +742,14 @@ function CadastroHidrico() {
               </Suspense>
             </div>
 
+              </div>
+            </fieldset>
+
+            <fieldset className="form-section">
+              <legend>Registro complementar</legend>
+              <p className="form-section-description">Referência temporal e informações úteis para a equipe.</p>
+              <div className="form-grid">
+
             <div className="form-field full-field">
               <label htmlFor="asset-last-reading">Última medição</label>
               <input id="asset-last-reading" aria-describedby="asset-last-reading-help" value={draft.lastReading} onChange={(event) => updateDraft('lastReading', event.target.value)} />
@@ -732,6 +768,8 @@ function CadastroHidrico() {
               />
               <small className="field-help" id="asset-notes-help">Registre condições, pendências e informações úteis para a próxima equipe.</small>
             </div>
+              </div>
+            </fieldset>
           </div>
 
           <div className="form-actions">

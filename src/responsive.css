@@ -745,6 +745,238 @@ html:not(.dark) select {
   }
 }
 
+/* Fluxo principal otimizado para operação quase integral em celulares. */
+@media (max-width: 900px) {
+  .route-page {
+    gap: 12px;
+  }
+
+  .route-page > .page-hero {
+    padding: 10px 4px 4px;
+    border: 0;
+    background: transparent;
+  }
+
+  .app-shell.dark .route-page > .page-hero {
+    padding: 10px 4px 4px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .app-shell.dark .route-page > .page-hero::after {
+    display: none;
+  }
+
+  .route-page > .page-hero h1 {
+    max-width: 22ch;
+    font-size: clamp(1.45rem, 6.8vw, 1.9rem);
+    line-height: 1.12;
+  }
+
+  .app-shell.dark .route-page > .page-hero h1 {
+    max-width: 22ch;
+    font-size: clamp(1.45rem, 6.8vw, 1.9rem);
+    line-height: 1.12;
+  }
+
+  .route-page .page-hero-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-bottom: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .route-page .page-hero-actions::-webkit-scrollbar,
+  .summary-strip::-webkit-scrollbar,
+  .category-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .route-page .page-hero-actions > * {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .summary-strip {
+    display: flex;
+    gap: 10px;
+    margin-inline: -10px;
+    padding: 0 10px 4px;
+    overflow-x: auto;
+    scroll-padding-inline: 10px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .summary-card {
+    min-width: 132px;
+    min-height: 102px;
+    flex: 0 0 132px;
+    gap: 6px;
+    padding: 13px;
+    border-top-width: 1px;
+    scroll-snap-align: start;
+  }
+
+  .summary-card.active {
+    border-color: color-mix(in srgb, var(--blue) 52%, var(--line));
+    box-shadow: inset 0 3px 0 var(--blue);
+  }
+
+  .summary-card strong {
+    font-size: 1.65rem;
+  }
+
+  .registry-tools {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .registry-search-field {
+    grid-column: 1 / -1;
+  }
+
+  .registry-tools .search-field input,
+  .registry-tools .filter-field input,
+  .registry-tools .filter-field select {
+    min-width: 0;
+  }
+
+  .registry-layout {
+    gap: 14px;
+  }
+
+  .registry-form {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .registry-form .form-heading {
+    margin: 0;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--panel);
+  }
+
+  .registry-form .category-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin: 10px 0 12px;
+    padding: 2px 1px 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .registry-form .category-tabs .filter-chip {
+    width: auto;
+    flex: 0 0 auto;
+    padding-inline: 15px;
+    border-radius: 999px;
+  }
+
+  .form-sections {
+    gap: 12px;
+  }
+
+  .form-section {
+    padding: 16px;
+    border-radius: 16px;
+    background: var(--panel);
+  }
+
+  .form-section legend {
+    font-size: 1rem;
+  }
+
+  .form-section-description {
+    margin-bottom: 15px;
+    font-size: 0.78rem;
+  }
+
+  .form-section .form-grid {
+    gap: 14px;
+  }
+
+  .form-section .form-grid input,
+  .form-section .form-grid select,
+  .form-section .form-grid textarea {
+    min-height: 48px;
+    padding: 11px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--panel) 82%, var(--panel-soft));
+  }
+
+  .form-section .form-grid textarea {
+    min-height: 104px;
+    resize: vertical;
+  }
+
+  .form-section .field-help {
+    font-size: 0.72rem;
+    line-height: 1.45;
+  }
+
+  .form-section .coordinate-picker-map {
+    min-height: 230px;
+    border-radius: 12px;
+  }
+
+  .registry-form .form-actions {
+    position: sticky;
+    z-index: 20;
+    bottom: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    margin: 12px -10px 0;
+    padding: 12px max(10px, env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    border-top: 1px solid var(--line);
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(16px);
+  }
+
+  .registry-form .form-actions > * {
+    width: auto;
+    min-height: 48px;
+    flex: 1;
+    border-radius: 12px;
+  }
+
+  .app-shell.dark .registry-form,
+  .app-shell.dark .registry-form .form-actions {
+    background: transparent;
+  }
+
+  .app-shell.dark .registry-form .form-heading,
+  .app-shell.dark .form-section {
+    border-color: rgba(148, 163, 184, 0.16);
+    background: rgba(8, 19, 34, 0.72);
+  }
+
+  .app-shell.dark .form-section .form-grid input,
+  .app-shell.dark .form-section .form-grid select,
+  .app-shell.dark .form-section .form-grid textarea {
+    border-color: rgba(148, 163, 184, 0.22);
+    background: rgba(15, 23, 42, 0.72);
+  }
+
+  .app-shell.dark .registry-form .form-actions {
+    border-top-color: rgba(148, 163, 184, 0.18);
+    background: rgba(3, 10, 20, 0.9);
+    box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.24);
+  }
+}
+
 @media (max-width: 340px) {
   .dashboard {
     width: calc(100% - 12px);

@@ -92,8 +92,10 @@ test('área autenticada mantém menu, formulários e tabelas utilizáveis no mob
   await expectNoDocumentOverflow(page);
 
   if (viewportWidth <= 900) {
-    const formColumns = await page.locator('.form-grid').evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' ').length);
-    expect(formColumns).toBe(1);
+    for (const formGrid of await page.locator('.form-grid').all()) {
+      const formColumns = await formGrid.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' ').length);
+      expect(formColumns).toBe(1);
+    }
 
     for (const field of await page.locator('.registry-form input, .registry-form select, .registry-form textarea').all()) {
       expect(Number.parseFloat(await field.evaluate((element) => getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);

@@ -1740,6 +1740,36 @@
   gap: 16px 20px;
 }
 
+.form-sections {
+  display: grid;
+  gap: 14px;
+}
+
+.form-section {
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--panel) 88%, var(--panel-soft));
+}
+
+.form-section legend {
+  padding: 0 7px;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 780;
+}
+
+.form-section-description {
+  margin: 0 0 14px;
+  color: var(--legacy-muted);
+  font-size: 0.76rem;
+  font-weight: 620;
+  line-height: 1.45;
+}
+
 .full-field {
   grid-column: 1 / -1;
 }
@@ -4118,6 +4148,19 @@
 }
 
 .app-shell.dark .field-help {
+  color: #8fa2b9;
+}
+
+.app-shell.dark .form-section {
+  border-color: rgba(148, 163, 184, 0.16);
+  background: rgba(8, 19, 34, 0.48);
+}
+
+.app-shell.dark .form-section legend {
+  color: #f8fafc;
+}
+
+.app-shell.dark .form-section-description {
   color: #8fa2b9;
 }
 
